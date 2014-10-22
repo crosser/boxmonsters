@@ -5,7 +5,7 @@
 
         Remake of Flying Arrows from 1990
         which in turn was an an effort to make Space Invaders
-        (nee Space Monsters) a first person 3D experience.
+        (née Space Monsters) a first person 3D experience.
 -}
 
 import Prelude hiding ((.), id)
