@@ -1,0 +1,99 @@
+unit Objects;
+
+interface
+
+type
+	ObjPtr=		^ObjType;
+	ObjType=	record
+				Next:	ObjPtr;
+				X,Y,Z,
+				Speed,
+				Length,
+				Time:	integer;
+			end;
+var
+	StartObj:	ObjPtr;
+
+procedure GenObj(X,Y,Z,Speed:integer);
+procedure DelObj(O:ObjPtr);
+procedure Move(O:ObjPtr);
+procedure Light(O:ObjPtr);
+procedure Extinguish(O:ObjPtr);
+procedure Flush;
+
+implementation
+
+uses Graph3d;
+
+procedure GenObj(X,Y,Z,Speed:integer);
+var
+	temp:		ObjPtr;
+begin
+	new(temp);
+	temp^.Next:=StartObj;
+	StartObj:=temp;
+	temp^.X:=X;
+	temp^.Y:=Y;
+	temp^.Z:=Z;
+	temp^.Speed:=Speed;
+	if Speed > 0 then
+		temp^.Length:=h div 2
+	else	temp^.Length:= - h div 2;
+	temp^.Time:=0;
+end; {GenObj}
+
+procedure DelObj(O:ObjPtr);
+var
+	prev:		ObjPtr;
+begin
+	prev:=StartObj;
+	if prev=O then begin
+		StartObj:=prev^.Next;
+		dispose(prev)
+	end else begin
+		while (prev^.Next <> O) and (prev^.Next <> nil) do
+			prev:=prev^.Next;
+		if prev^.Next <> nil then begin
+			prev^.Next:=O^.Next;
+			dispose(O)
+		end
+	end
+end; {DelObj}
+
+procedure Move(O:ObjPtr);
+begin with O^ do begin
+	Z:=Z+Speed;
+	inc(Time)
+end end; {Move}
+
+procedure Light(O:ObjPtr);
+var
+	color:		ColorIndex;
+begin with O^ do begin
+	if Speed > 0 then color:=Ar1Color else color:=Ar2Color;
+	Segment(X,Y,Z,X,Y,Z-Length,color);
+end end; {Light}
+
+procedure Extinguish(O:ObjPtr);
+begin with O^ do begin
+	Segment(X,Y,Z,X,Y,Z-Length,BackColor);
+end end; {Extinguish}
+
+procedure Flush;
+var
+	temp,
+	next:		ObjPtr;
+begin
+	temp:=StartObj;
+	while temp <> nil do begin
+		next:=temp^.Next;
+		dispose(temp);
+		temp:=next
+	end;
+	StartObj:=nil
+end; {Flush}
+
+
+begin {unit startup}
+	StartObj:=nil
+end.
