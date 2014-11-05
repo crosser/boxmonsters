@@ -78,8 +78,8 @@ myshift x y = newMatrix RowMajor [ 1, 0, 0, -(realToFrac x :: GLfloat)
                                 , 0, 0, 0, 1
                                 ]
 
-renderWorld :: (Double, Double) -> IO ()
-renderWorld (x, y) = do
+renderWorld :: Size -> (Double, Double) -> IO ()
+renderWorld size@(Size w h) (x, y) = do
   loadIdentity
   mydepth >>= multMatrix
   myshift x y >>= multMatrix
@@ -92,10 +92,11 @@ renderWorld (x, y) = do
   swapBuffers
 
 runWire :: (HasTime t s) =>
-  IORef Bool -> Session IO s -> Wire s e IO a (Double, Double) -> IO ()
-runWire closedRef session wire = do
+  (IORef Bool, IORef Size) -> Session IO s -> Wire s e IO a (Double, Double) -> IO ()
+runWire (closedRef, sizeRef) session wire = do
   pollEvents
   closed <- readIORef closedRef
+  size <- readIORef sizeRef
   esc <- getKey ESC
   if closed || (esc == Press)
     then return ()
@@ -105,8 +106,8 @@ runWire closedRef session wire = do
       case wt' of
         Left  _ -> return ()
         Right worldstate -> do
-          renderWorld worldstate
-          runWire closedRef session' wire'
+          renderWorld size worldstate
+          runWire (closedRef, sizeRef) session' wire'
 
 main :: IO ()
 main = do
@@ -117,6 +118,7 @@ main = do
                         , DisplayDepthBits 24
                         ] Window
   closedRef <- newIORef False
+  sizeRef <- newIORef (Size 640 480)
   windowCloseCallback $= do
     writeIORef closedRef True
     return True
@@ -131,10 +133,10 @@ main = do
   clearColor $= Color4 0 0 1 0
   windowSizeCallback $= \ size@(Size w h) ->
     do
+      writeIORef sizeRef size
       viewport $= (Position 0 0, size)
-      -- FIXME: re-render the world
 
-  runWire closedRef clockSession_ podPos
+  runWire (closedRef, sizeRef) clockSession_ podPos
 
   closeWindow
   terminate
