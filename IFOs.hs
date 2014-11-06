@@ -19,6 +19,9 @@ data IFO = IFO  { render :: Render
                 , nature :: IFONature
                 }
 
+isA :: IFONature -> IFO -> Bool
+isA what who = nature who == what
+
 type World = [IFO]
 
 mkPlayer :: Position -> Velocity -> IFO
@@ -42,4 +45,4 @@ m = mkGreenMonster (3,3,3) (4,4,4)
 
 w = [p, m]
 
-main = mapM_ render (filter (\x -> nature x == Player) w)
+main = mapM_ render (filter (isA Player) w)
