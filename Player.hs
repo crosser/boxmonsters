@@ -1,22 +1,14 @@
-{-
-        Box Monsters
-
-        Copyright 2014 Eugene Crosser
-
-        Remake of Flying Arrows from 1990
-        which in turn was an an effort to make Space Invaders
-        (née Space Monsters) a first person 3D experience.
--}
+module Player (renderPlayer, playerWire) where
 
 import Prelude hiding ((.), id)
-import Control.Monad.IO.Class
 
 import Control.Wire
 import FRP.Netwire
 
 import Graphics.Rendering.OpenGL
 import Graphics.UI.GLFW
-import Data.IORef
+
+import IFOs
 
 podSpeedX :: (Monoid e) => Wire s e IO a Double
 podSpeedX = pure ( 0.0) . isKeyDown LEFT . isKeyDown RIGHT
@@ -32,6 +24,13 @@ podSpeedY = pure ( 0.0) . isKeyDown DOWN . isKeyDown UP
 
 podPos :: (HasTime t s) => Wire s () IO a (Double, Double)
 podPos = (integral 0 . podSpeedX) &&& (integral 0 . podSpeedY)
+
+playerWire :: (HasTime t s) => Wire s () IO a IFO
+playerWire = pure $ IFO { render = renderPlayer (0, 0, 0)
+                        , pos    = (0, 0, 0)
+                        , vel    = (0, 0, 0)
+                        , nature = Player
+                        }
 
 -------------------------
 
@@ -87,20 +86,8 @@ myshift x y = newMatrix RowMajor [ 1, 0, 0, -(realToFrac x :: GLfloat)
                                 , 0, 0, 0, 1
                                 ]
 
-renderWorld :: Size -> (Double, Double) -> IO ()
-renderWorld size@(Size w h) (x, y) = do
-  clear [ColorBuffer, DepthBuffer]
-
-{-
-  matrixMode $= Modelview 0
-  loadIdentity
-  myshift (-x) (-y) >>= multMatrix
-  renderColor (0, 0, 0, 1)
-  renderXHair
-  --renderPrimitive Points $
-  --  renderPoint (x, y, 0.5)
--}
-
+renderPlayer :: FOPosition -> IO ()
+renderPlayer (x, y, _) = do
   matrixMode $= Projection
   loadIdentity
   mydepth >>= multMatrix
@@ -109,55 +96,3 @@ renderWorld size@(Size w h) (x, y) = do
   renderBox
   renderColor (0, 0, 0, 1)
   renderXHair x y
-
-  swapBuffers
-
-runWire :: (HasTime t s) =>
-  (IORef Bool, IORef Size) -> Session IO s -> Wire s e IO a (Double, Double) -> IO ()
-runWire (closedRef, sizeRef) session wire = do
-  pollEvents
-  closed <- readIORef closedRef
-  size <- readIORef sizeRef
-  esc <- getKey ESC
-  if closed || (esc == Press)
-    then return ()
-    else do
-      (st , session') <- stepSession session
-      (wt', wire'   ) <- stepWire wire st $ Right undefined
-      case wt' of
-        Left  _ -> return ()
-        Right worldstate -> do
-          renderWorld size worldstate
-          runWire (closedRef, sizeRef) session' wire'
-
-main :: IO ()
-main = do
-  initialize
-  openWindow (Size 640 480)
-                        [ DisplayRGBBits 8 8 8
-                        , DisplayAlphaBits 8
-                        , DisplayDepthBits 24
-                        ] Window
-  closedRef <- newIORef False
-  sizeRef <- newIORef (Size 640 480)
-  windowCloseCallback $= do
-    writeIORef closedRef True
-    return True
-  windowTitle $= "Box Monsters"
-  -- depthFunc $= Just Less
-  shadeModel $= Smooth
-  lineSmooth $= Enabled
-  blend $= Enabled
-  blendFunc $= (SrcAlpha, OneMinusSrcAlpha)
-  lineWidth $= 1.5
-  pointSize $= 5
-  clearColor $= Color4 0 0 1 0
-  windowSizeCallback $= \ size@(Size w h) ->
-    do
-      writeIORef sizeRef size
-      viewport $= (Position 0 0, size)
-
-  runWire (closedRef, sizeRef) clockSession_ podPos
-
-  closeWindow
-  terminate
