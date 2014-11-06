@@ -1,6 +1,6 @@
 -- Identified Flying Objects
 
-module IFOs ( FOVector
+module IFOs ( FOVector(..)
         , FOPosition
         , FOVelocity
         , FORender
@@ -8,7 +8,7 @@ module IFOs ( FOVector
         , IFO(..)
         , foIsA) where
 
-type FOVector = (Double, Double, Double)
+data FOVector = FOVector Double Double Double
 
 type FOPosition = FOVector
 

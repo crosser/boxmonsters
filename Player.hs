@@ -32,26 +32,26 @@ renderXHair x y =
     , [(     x , (y+0.01), 0.5), (     x , (y+0.02), 0.5)]
     ]
 
-mydepth :: IO (GLmatrix GLfloat)
-mydepth = newMatrix RowMajor [ 1, 0, 0, 0
-                             , 0, 1, 0, 0
-                             , 0, 0, 0, 0
-                             , 0, 0, 2, 0
-                             ]
+boxdepth :: IO (GLmatrix GLfloat)
+boxdepth = newMatrix RowMajor [ 1, 0, 0, 0
+                              , 0, 1, 0, 0
+                              , 0, 0, 0, 0
+                              , 0, 0, 2, 0
+                              ]
 
-myshift :: Double -> Double -> IO (GLmatrix GLfloat)
-myshift x y = newMatrix RowMajor [ 1, 0, 0, -(realToFrac x :: GLfloat)
-                                , 0, 1, 0, -(realToFrac y :: GLfloat)
-                                , 0, 0, 1, 0
-                                , 0, 0, 0, 1
-                                ]
+boxshift :: Double -> Double -> IO (GLmatrix GLfloat)
+boxshift x y = newMatrix RowMajor [ 1, 0, 0, -(realToFrac x :: GLfloat)
+                                  , 0, 1, 0, -(realToFrac y :: GLfloat)
+                                  , 0, 0, 1, 0
+                                  , 0, 0, 0, 1
+                                  ]
 
 renderPlayer :: FOPosition -> IO ()
-renderPlayer (x, y, _) = do
+renderPlayer (FOVector x y _) = do
   matrixMode $= Projection
   loadIdentity
-  mydepth >>= multMatrix
-  myshift x y >>= multMatrix
+  boxdepth >>= multMatrix
+  boxshift x y >>= multMatrix
   color4d (1, 1, 1, 1)
   renderBox
   color4d (0, 0, 0, 1)
@@ -66,26 +66,39 @@ isKeyDown k = mkGen_ $ \_ -> do
     Press   -> Right mempty
     Release -> Left  mempty
 
-playerSpeedX :: (Monoid e) => Wire s e IO a Double
-playerSpeedX = pure ( 0.0) . isKeyDown LEFT . isKeyDown RIGHT
-           <|> pure (-0.5) . isKeyDown LEFT
-           <|> pure ( 0.5) . isKeyDown RIGHT
-           <|> pure ( 0.0)
+playerVelX :: (Monoid e) => Wire s e IO a Double
+playerVelX = pure ( 0.0) . isKeyDown LEFT . isKeyDown RIGHT
+         <|> pure (-0.5) . isKeyDown LEFT
+         <|> pure ( 0.5) . isKeyDown RIGHT
+         <|> pure ( 0.0)
 
-playerSpeedY :: (Monoid e) => Wire s e IO a Double
-playerSpeedY = pure ( 0.0) . isKeyDown DOWN . isKeyDown UP
-           <|> pure (-0.5) . isKeyDown DOWN
-           <|> pure ( 0.5) . isKeyDown UP
-           <|> pure ( 0.0)
+playerVelY :: (Monoid e) => Wire s e IO a Double
+playerVelY = pure ( 0.0) . isKeyDown DOWN . isKeyDown UP
+         <|> pure (-0.5) . isKeyDown DOWN
+         <|> pure ( 0.5) . isKeyDown UP
+         <|> pure ( 0.0)
 
-playerPos :: (HasTime t s) => Wire s () IO a (Double, Double)
-playerPos = (integral 0 . playerSpeedX) &&& (integral 0 . playerSpeedY)
+playerVel :: (Monoid e) => Wire s e IO a FOVelocity
+playerVel = FOVector <$> playerVelX <*> playerVelY <*> (pure 0.0)
+
+playerPosX :: (HasTime t s) => Wire s () IO a Double
+playerPosX = integral 0 . playerVelX
+
+playerPosY :: (HasTime t s) => Wire s () IO a Double
+playerPosY = integral 0 . playerVelY
+
+playerPos :: (HasTime t s) => Wire s () IO a FOPosition
+playerPos = FOVector <$> playerPosX <*> playerPosY <*> (pure 0.0)
 
 playerWire :: (HasTime t s) => Wire s () IO a IFO
-playerWire = pure $ IFO { render = renderPlayer (0, 0, 0)
-                        , pos    = (0, 0, 0)
-                        , vel    = (0, 0, 0)
+playerWire = IFO <$> (renderPlayer <$> playerPos)
+                 <*> playerPos
+                 <*> playerVel
+                 <*> (pure Player)
+{-
+playerWire = pure $ IFO { render = renderPlayer $ FOVector 0 0 0
+                        , pos    = FOVector 0 0 0
+                        , vel    = FOVector 0 0 0
                         , nature = Player
                         }
-
--------------------------
+-}
