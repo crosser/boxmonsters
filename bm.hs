@@ -64,6 +64,15 @@ renderBox =
     , [(  1 , (-1), 0), (  1 , (-1), 1), ((-1), (-1), 1)]
     ]
 
+renderXHair :: Double -> Double -> IO ()
+renderXHair x y =
+  mapM_ (renderPrimitive Lines . mapM_ renderPoint)
+    [ [((x-0.01),      y , 0.5), ((x-0.02),      y , 0.5)]
+    , [((x+0.01),      y , 0.5), ((x+0.02),      y , 0.5)]
+    , [(     x , (y-0.01), 0.5), (     x , (y-0.02), 0.5)]
+    , [(     x , (y+0.01), 0.5), (     x , (y+0.02), 0.5)]
+    ]
+
 mydepth :: IO (GLmatrix GLfloat)
 mydepth = newMatrix RowMajor [ 1, 0, 0, 0
                              , 0, 1, 0, 0
@@ -80,15 +89,27 @@ myshift x y = newMatrix RowMajor [ 1, 0, 0, -(realToFrac x :: GLfloat)
 
 renderWorld :: Size -> (Double, Double) -> IO ()
 renderWorld size@(Size w h) (x, y) = do
+  clear [ColorBuffer, DepthBuffer]
+
+{-
+  matrixMode $= Modelview 0
+  loadIdentity
+  myshift (-x) (-y) >>= multMatrix
+  renderColor (0, 0, 0, 1)
+  renderXHair
+  --renderPrimitive Points $
+  --  renderPoint (x, y, 0.5)
+-}
+
+  matrixMode $= Projection
   loadIdentity
   mydepth >>= multMatrix
   myshift x y >>= multMatrix
-  clear [ColorBuffer, DepthBuffer]
   renderColor (1, 1, 1, 1)
   renderBox
   renderColor (0, 0, 0, 1)
-  renderPrimitive Points $
-    renderPoint (x, y, 0.5)
+  renderXHair x y
+
   swapBuffers
 
 runWire :: (HasTime t s) =>
