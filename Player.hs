@@ -95,10 +95,3 @@ playerWire = IFO <$> (renderPlayer <$> playerPos)
                  <*> playerPos
                  <*> playerVel
                  <*> (pure Player)
-{-
-playerWire = pure $ IFO { render = renderPlayer $ FOVector 0 0 0
-                        , pos    = FOVector 0 0 0
-                        , vel    = FOVector 0 0 0
-                        , nature = Player
-                        }
--}
