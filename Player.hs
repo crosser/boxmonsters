@@ -1,3 +1,5 @@
+{-# LANGUAGE Arrows #-}
+
 module Player (renderPlayer, playerWire) where
 
 import Prelude hiding ((.), id)
@@ -20,20 +22,30 @@ isKeyDown k = mkGen_ $ \_ -> do
     Press   -> Right mempty
     Release -> Left  mempty
 
-playerVelX :: (Monoid e) => Wire s e IO a Double
-playerVelX = pure ( 0.0) . isKeyDown LEFT . isKeyDown RIGHT
+propulsionX :: (Monoid e) => Wire s e IO a Double
+propulsionX = pure ( 0.0) . isKeyDown LEFT . isKeyDown RIGHT
          <|> pure (-0.5) . isKeyDown LEFT
          <|> pure ( 0.5) . isKeyDown RIGHT
          <|> pure ( 0.0)
 
-playerVelY :: (Monoid e) => Wire s e IO a Double
-playerVelY = pure ( 0.0) . isKeyDown DOWN . isKeyDown UP
+propulsionY :: (Monoid e) => Wire s e IO a Double
+propulsionY = pure ( 0.0) . isKeyDown DOWN . isKeyDown UP
          <|> pure (-0.5) . isKeyDown DOWN
          <|> pure ( 0.5) . isKeyDown UP
          <|> pure ( 0.0)
 
-playerVel :: (Monoid e) => Wire s e IO a FOVelocity
-playerVel = FOVector <$> playerVelX <*> playerVelY <*> (pure 0.0)
+-- Produce if input signal is True otherwise inhibit
+isstuck :: (Monoid e) => Wire s e m Bool e
+isstuck = mkPure_ $ \hit -> if hit then Right mempty else Left mempty
+
+playerVelX :: (Monoid e) => Wire s e IO Bool Double
+playerVelX = pure ( 0.0) . isstuck <|> propulsionX
+
+playerVelY :: (Monoid e) => Wire s e IO Bool Double
+playerVelY = pure ( 0.0) . isstuck <|> propulsionY
+
+propulsion :: (Monoid e) => Wire s e IO a FOVelocity
+propulsion = FOVector <$> propulsionX <*> propulsionY <*> (pure 0.0)
 
 clamp :: (Double, Double) -> Wire s e m Double (Double, Bool)
 clamp lim = mkPure_ $ clamp' lim
@@ -44,11 +56,20 @@ clamp lim = mkPure_ $ clamp' lim
       | x > hi    = Right (hi, True)
       | otherwise = Right (x,  False)
 
+positionW :: (HasTime t s) => Wire s () IO Double (Double, Bool)
+positionW = clamp ((-1), 1) . integral 0
+
 playerPosX :: (HasTime t s) => Wire s () IO a Double
-playerPosX = integral 0 . playerVelX
+playerPosX = proc _ -> do
+  rec (pos, coll) <- positionW -< vel
+      vel <- playerVelX -< coll
+  returnA -< pos
 
 playerPosY :: (HasTime t s) => Wire s () IO a Double
-playerPosY = integral 0 . playerVelY
+playerPosY = proc _ -> do
+  rec (pos, coll) <- positionW -< vel
+      vel <- playerVelY -< coll
+  returnA -< pos
 
 playerPos :: (HasTime t s) => Wire s () IO a FOPosition
 playerPos = FOVector <$> playerPosX <*> playerPosY <*> (pure 0.0)
@@ -56,7 +77,7 @@ playerPos = FOVector <$> playerPosX <*> playerPosY <*> (pure 0.0)
 playerWire :: (HasTime t s) => Wire s () IO a IFO
 playerWire = IFO <$> (renderPlayer <$> playerPos)
                  <*> playerPos
-                 <*> playerVel
+                 <*> propulsion
                  <*> (pure Player)
 
 -- Rendering Player. Because it is not visible, the "rendering" is
