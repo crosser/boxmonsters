@@ -15,6 +15,15 @@ import IFOs
 
 -- Functional part. Player is a wire controlled by keypresses.
 
+-- game constants
+speed = 0.5
+limX = ((-1.0), 1.0)
+limY = ((-1.0), 1.0)
+
+-- key pairs for X and Y control
+kpX = (LEFT, RIGHT)
+kpY = (DOWN, UP)
+
 isKeyDown :: (Enum k, Monoid e) => k -> Wire s e IO a e
 isKeyDown k = mkGen_ $ \_ -> do
   s <- getKey k
@@ -22,63 +31,57 @@ isKeyDown k = mkGen_ $ \_ -> do
     Press   -> Right mempty
     Release -> Left  mempty
 
-propulsionX :: (Monoid e) => Wire s e IO a Double
-propulsionX = pure ( 0.0) . isKeyDown LEFT . isKeyDown RIGHT
-         <|> pure (-0.5) . isKeyDown LEFT
-         <|> pure ( 0.5) . isKeyDown RIGHT
-         <|> pure ( 0.0)
+aboveLo :: (Monoid e) => Wire s e m (Bool, Bool) e
+aboveLo = mkPure_ $ \hit -> if (fst hit) then Right mempty else Left mempty
+belowHi :: (Monoid e) => Wire s e m (Bool, Bool) e
+belowHi = mkPure_ $ \hit -> if (snd hit) then Right mempty else Left mempty
+ignLim  :: (Monoid e) => Wire s e m (Bool, Bool) e
+ignLim  = mkPure_ $ \_ -> Right mempty
 
-propulsionY :: (Monoid e) => Wire s e IO a Double
-propulsionY = pure ( 0.0) . isKeyDown DOWN . isKeyDown UP
-         <|> pure (-0.5) . isKeyDown DOWN
-         <|> pure ( 0.5) . isKeyDown UP
-         <|> pure ( 0.0)
+velocity :: (Monoid e)
+         => (SpecialKey, SpecialKey)
+         -> Wire s e IO (Bool, Bool) Double
+velocity kp = pure (   0.0) . isKeyDown (fst kp) . isKeyDown (snd kp) . ignLim
+          <|> pure (-speed) . isKeyDown (fst kp) . aboveLo
+          <|> pure ( speed) . isKeyDown (snd kp) . belowHi
+          <|> pure (   0.0) . ignLim
 
--- Produce if input signal is True otherwise inhibit
-isstuck :: (Monoid e) => Wire s e m Bool e
-isstuck = mkPure_ $ \hit -> if hit then Right mempty else Left mempty
-
-playerVelX :: (Monoid e) => Wire s e IO Bool Double
-playerVelX = pure ( 0.0) . isstuck <|> propulsionX
-
-playerVelY :: (Monoid e) => Wire s e IO Bool Double
-playerVelY = pure ( 0.0) . isstuck <|> propulsionY
-
-propulsion :: (Monoid e) => Wire s e IO a FOVelocity
-propulsion = FOVector <$> propulsionX <*> propulsionY <*> (pure 0.0)
-
-clamp :: (Double, Double) -> Wire s e m Double (Double, Bool)
-clamp lim = mkPure_ $ clamp' lim
+coord :: (HasTime t s)
+         => (Double, Double)
+         -> Wire s () IO Double (Double, (Bool, Bool))
+coord lim = clamp lim . integral 0
   where
-    clamp' :: (Double, Double) -> Double -> Either e (Double, Bool)
+    clamp :: (Double, Double) -> Wire s e m Double (Double, (Bool, Bool))
+    clamp lim = mkPure_ $ clamp' lim
+    clamp' :: (Double, Double) -> Double -> Either e (Double, (Bool, Bool))
     clamp' (lo, hi) x
-      | x < lo    = Right (lo, True)
-      | x > hi    = Right (hi, True)
-      | otherwise = Right (x,  False)
+      | x < lo    = Right (lo, (False, True))
+      | x > hi    = Right (hi, (True, False))
+      | otherwise = Right (x,  (True, True))
 
-positionW :: (HasTime t s) => Wire s () IO Double (Double, Bool)
-positionW = clamp ((-1), 1) . integral 0
-
-playerPosX :: (HasTime t s) => Wire s () IO a Double
-playerPosX = proc _ -> do
-  rec (pos, coll) <- positionW -< vel
-      vel <- playerVelX -< coll
-  returnA -< pos
-
-playerPosY :: (HasTime t s) => Wire s () IO a Double
-playerPosY = proc _ -> do
-  rec (pos, coll) <- positionW -< vel
-      vel <- playerVelY -< coll
-  returnA -< pos
-
-playerPos :: (HasTime t s) => Wire s () IO a FOPosition
-playerPos = FOVector <$> playerPosX <*> playerPosY <*> (pure 0.0)
+axis :: (HasTime t s)
+     => (SpecialKey, SpecialKey)        -- key pair
+     -> (Double, Double)                -- limits
+     -> Wire s () IO a (Double, Double)   -- (coord, velocity) for one axis
+axis kp lims = proc _ -> do
+  rec (pos, lim) <- coord lims -< vel
+      vel <- velocity kp -< lim
+  returnA -< (pos, vel)
 
 playerWire :: (HasTime t s) => Wire s () IO a IFO
-playerWire = IFO <$> (renderPlayer <$> playerPos)
-                 <*> playerPos
-                 <*> propulsion
+playerWire = IFO <$> (renderPlayer <$> pos3)
+                 <*> pos3
+                 <*> vel3
                  <*> (pure Player)
+  where
+    pos3 :: (HasTime t s) => Wire s () IO a FOPosition
+    pos3 = FOVector <$> (fst <$> (axis kpX limX))
+                    <*> (fst <$> (axis kpY limY))
+                    <*> (pure 0.0)
+    vel3 :: (HasTime t s) => Wire s () IO a FOVelocity
+    vel3 = FOVector <$> (snd <$> (axis kpX limX))
+                    <*> (snd <$> (axis kpY limY))
+                    <*> (pure 0.0)
 
 -- Rendering Player. Because it is not visible, the "rendering" is
 -- in fact setting up the scene (box, perspective and crosshair).
