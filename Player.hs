@@ -17,8 +17,9 @@ import IFOs
 
 -- game constants
 speed = 0.5
-limX = ((-1.0), 1.0)
-limY = ((-1.0), 1.0)
+hvsize = 0.05
+limX = (hvsize-1.0, 1.0-hvsize)
+limY = (hvsize-1.0, 1.0-hvsize)
 
 -- key pairs for X and Y control
 kpX = (LEFT, RIGHT)
