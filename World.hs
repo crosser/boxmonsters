@@ -10,12 +10,9 @@ import Graphics.UI.GLFW
 
 import IFOs
 import Player
+import Monster
 
 -- to me moved to their respective modules
-data MonsterLevel = GreenMonster | RedMonster
-data Monster = Monster PosVel MonsterLevel
-monsterWire :: Wire s () IO a Monster
-monsterWire = pure $ Monster ((0,0,0),(0,0,0)) GreenMonster
 data Projectile = Projectile PosVel
 projectileWire :: Wire s () IO a Projectile
 projectileWire = pure $ Projectile ((0,0,0),(0,0,0))
@@ -34,7 +31,7 @@ renderWorld :: Size -> World -> IO ()
 renderWorld size (World player monsters projectiles) = do
   clear [ColorBuffer, DepthBuffer]
   renderPlayer size player
-  -- mapM_ renderMonster size monsters
+  mapM_ (renderMonster size) monsters
   -- mapM_ renderProjectile size projectiles
   renderHUD size player
   swapBuffers
