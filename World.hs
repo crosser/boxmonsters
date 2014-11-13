@@ -15,9 +15,9 @@ import Player
 import Monster
 
 -- to me moved to their respective modules
-data Projectile = Projectile PosVel
-projectileWire :: Wire s () IO a Projectile
-projectileWire = pure $ Projectile ((0,0,0),(0,0,0))
+data Projectile = Projectile LocVel
+projectilesWire :: Wire s () IO a [Projectile]
+projectilesWire = (:[]) <$> (pure $ Projectile ((0,0,0),(0,0,0)))
 -- end of to me moved to their respective modules
 
 data World = World Player [Monster] [Projectile]
@@ -25,9 +25,11 @@ data World = World Player [Monster] [Projectile]
 worldWire :: (HasTime t s) => Wire s () IO a World
 -- For now, just compose all wires.
 -- Must also create monsters and handle collisions.
-worldWire = World <$> playerWire
-                  <*> ((:[]) <$> monsterWire)
-                  <*> ((:[]) <$> projectileWire)
+worldWire = proc _ -> do
+  player@(Player locvel launch) <- playerWire -< ()
+  monsters <- monstersWire -< ()
+  projectiles <- projectilesWire -< ()
+  returnA -< World player monsters projectiles
 
 renderWorld :: Size -> World -> IO ()
 renderWorld size (World player monsters projectiles) = do

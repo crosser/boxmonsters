@@ -1,6 +1,6 @@
 {-# LANGUAGE Arrows #-}
 
-module Monster (Monster, monsterWire, renderMonster) where
+module Monster (Monster(..), monstersWire, renderMonster) where
 
 import Prelude hiding ((.), id)
 
@@ -14,7 +14,7 @@ import GLUtils
 import IFOs
 
 data MonsterLevel = GreenMonster | RedMonster
-data Monster = Monster PosVel MonsterLevel
+data Monster = Monster LocVel MonsterLevel
 
 hv = 0.05
 
@@ -22,6 +22,7 @@ hv = 0.05
 
 monsterWire :: Wire s () IO a Monster
 monsterWire = pure $ Monster ((0,0,1),(0,0,1)) GreenMonster
+monstersWire = (:[]) <$> monsterWire
 
 -- Rendering Monster.
 
