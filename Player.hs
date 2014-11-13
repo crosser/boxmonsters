@@ -1,6 +1,6 @@
 {-# LANGUAGE Arrows #-}
 
-module Player (renderPlayer, playerWire) where
+module Player (Player, playerWire, renderPlayer, renderHUD) where
 
 import Prelude hiding ((.), id)
 
@@ -12,6 +12,8 @@ import Graphics.UI.GLFW
 
 import GLUtils
 import IFOs
+
+data Player = Player PosVel
 
 -- Functional part. Player is a wire controlled by keypresses.
 
@@ -69,11 +71,8 @@ axis kp lims = proc _ -> do
       vel <- velocity kp -< lim
   returnA -< (pos, vel)
 
-playerWire :: (HasTime t s) => Wire s () IO a IFO
-playerWire = IFO <$> (renderPlayer <$> pos3)
-                 <*> pos3
-                 <*> vel3
-                 <*> (pure Player)
+playerWire :: (HasTime t s) => Wire s () IO a Player
+playerWire = Player <$> ((,) <$> pos3 <*> vel3)
   where
     pos3 :: (HasTime t s) => Wire s () IO a Vec3
     pos3 = (,,) <$> (fst <$> (axis kpX limX))
@@ -119,14 +118,16 @@ boxshift x y = newMatrix RowMajor [ 1, 0, 0, -(realToFrac x :: GLfloat)
                                   , 0, 0, 0, 1
                                   ]
 
-renderPlayer :: Vec3 -> IO ()
-renderPlayer (x, y, _) = do
+renderPlayer :: Player -> IO ()
+renderPlayer (Player ((x, y, _), _)) = do
   matrixMode $= Projection
   loadIdentity
   boxdepth >>= multMatrix
   boxshift x y >>= multMatrix
   color4d (1, 1, 1, 1)
   renderBox
+
+renderHUD :: Player -> IO ()
+renderHUD (Player ((x, y, _), _)) = do
   color4d (0, 0, 0, 1)
   renderXHair x y
-

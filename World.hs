@@ -11,15 +11,29 @@ import Graphics.UI.GLFW
 import IFOs
 import Player
 
-type World = [IFO]
+-- to me moved to their respective modules
+data MonsterClass = GreenMonster | RedMonster
+data Monster = Monster PosVel MonsterClass
+monsterWire :: Wire s () IO a Monster
+monsterWire = pure $ Monster ((0,0,0),(0,0,0)) GreenMonster
+data Projectile = Projectile PosVel
+projectileWire :: Wire s () IO a Projectile
+projectileWire = pure $ Projectile ((0,0,0),(0,0,0))
+-- end of to me moved to their respective modules
 
-renderWorld :: Size -> World -> IO ()
-renderWorld size ws = do
-  clear [ColorBuffer, DepthBuffer]
-  mapM_ render $ filter (foIsA Player) ws
-  mapM_ render $ filter (not.foIsA Player) ws
-  swapBuffers
+data World = World Player [Monster] [Projectile]
 
 worldWire :: (HasTime t s) => Wire s () IO a World
 -- for now, make it of just a single Player element
-worldWire = (:[]) <$> playerWire
+worldWire = World <$> playerWire
+                  <*> ((:[]) <$> monsterWire)
+                  <*> ((:[]) <$> projectileWire)
+
+renderWorld :: Size -> World -> IO ()
+renderWorld size (World player monsters projectiles) = do
+  clear [ColorBuffer, DepthBuffer]
+  renderPlayer player
+  -- mapM_ renderMonster monsters
+  -- mapM_ renderProjectile projectiles
+  renderHUD player
+  swapBuffers
