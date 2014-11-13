@@ -12,8 +12,8 @@ import IFOs
 import Player
 
 -- to me moved to their respective modules
-data MonsterClass = GreenMonster | RedMonster
-data Monster = Monster PosVel MonsterClass
+data MonsterLevel = GreenMonster | RedMonster
+data Monster = Monster PosVel MonsterLevel
 monsterWire :: Wire s () IO a Monster
 monsterWire = pure $ Monster ((0,0,0),(0,0,0)) GreenMonster
 data Projectile = Projectile PosVel
@@ -24,7 +24,8 @@ projectileWire = pure $ Projectile ((0,0,0),(0,0,0))
 data World = World Player [Monster] [Projectile]
 
 worldWire :: (HasTime t s) => Wire s () IO a World
--- for now, make it of just a single Player element
+-- For now, just compose all wires.
+-- Must also create monsters and handle collisions.
 worldWire = World <$> playerWire
                   <*> ((:[]) <$> monsterWire)
                   <*> ((:[]) <$> projectileWire)
@@ -32,8 +33,8 @@ worldWire = World <$> playerWire
 renderWorld :: Size -> World -> IO ()
 renderWorld size (World player monsters projectiles) = do
   clear [ColorBuffer, DepthBuffer]
-  renderPlayer player
-  -- mapM_ renderMonster monsters
-  -- mapM_ renderProjectile projectiles
-  renderHUD player
+  renderPlayer size player
+  -- mapM_ renderMonster size monsters
+  -- mapM_ renderProjectile size projectiles
+  renderHUD size player
   swapBuffers

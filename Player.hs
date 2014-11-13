@@ -118,8 +118,8 @@ boxshift x y = newMatrix RowMajor [ 1, 0, 0, -(realToFrac x :: GLfloat)
                                   , 0, 0, 0, 1
                                   ]
 
-renderPlayer :: Player -> IO ()
-renderPlayer (Player ((x, y, _), _)) = do
+renderPlayer :: Size -> Player -> IO ()
+renderPlayer _ (Player ((x, y, _), _)) = do
   matrixMode $= Projection
   loadIdentity
   boxdepth >>= multMatrix
@@ -127,7 +127,7 @@ renderPlayer (Player ((x, y, _), _)) = do
   color4d (1, 1, 1, 1)
   renderBox
 
-renderHUD :: Player -> IO ()
-renderHUD (Player ((x, y, _), _)) = do
+renderHUD :: Size -> Player -> IO ()
+renderHUD _ (Player ((x, y, _), _)) = do
   color4d (0, 0, 0, 1)
   renderXHair x y
