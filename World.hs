@@ -1,3 +1,5 @@
+{-# LANGUAGE Arrows #-}
+
 module World where
 
 import Prelude hiding ((.), id)

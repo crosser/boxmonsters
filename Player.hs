@@ -34,6 +34,15 @@ isKeyDown k = mkGen_ $ \_ -> do
     Press   -> Right mempty
     Release -> Left  mempty
 
+launch :: (Monoid e) => Wire s e IO e (Event e)
+launch = (became (\_ -> True)) . (isKeyDown ENTER)
+{-
+shooting = hold (isKeyDown ENTER) >>> (once --> coolDown >>> shooting)
+  where
+    coolDown =
+      arr head . multicast [ after 0.05, hold (not . isKeyDown ENTER) ]
+-}
+
 aboveLo :: (Monoid e) => Wire s e m (Bool, Bool) e
 aboveLo = mkPure_ $ \hit -> if (fst hit) then Right mempty else Left mempty
 belowHi :: (Monoid e) => Wire s e m (Bool, Bool) e
@@ -49,10 +58,10 @@ velocity kp = pure (   0.0) . isKeyDown (fst kp) . isKeyDown (snd kp) . ignLim
           <|> pure ( speed) . isKeyDown (snd kp) . belowHi
           <|> pure (   0.0) . ignLim
 
-coord :: (HasTime t s)
+location :: (HasTime t s)
          => (Double, Double)
          -> Wire s () IO Double (Double, (Bool, Bool))
-coord lim = clamp lim . integral 0
+location lim = clamp lim . integral 0
   where
     clamp :: (Double, Double) -> Wire s e m Double (Double, (Bool, Bool))
     clamp lim = mkPure_ $ clamp' lim
@@ -65,9 +74,9 @@ coord lim = clamp lim . integral 0
 axis :: (HasTime t s)
      => (SpecialKey, SpecialKey)        -- key pair
      -> (Double, Double)                -- limits
-     -> Wire s () IO a (Double, Double)   -- (coord, velocity) for one axis
+     -> Wire s () IO a (Double, Double)   -- (location, velocity) for one axis
 axis kp lims = proc _ -> do
-  rec (pos, lim) <- coord lims -< vel
+  rec (pos, lim) <- location lims -< vel
       vel <- velocity kp -< lim
   returnA -< (pos, vel)
 
