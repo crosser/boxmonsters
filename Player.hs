@@ -75,12 +75,12 @@ playerWire = IFO <$> (renderPlayer <$> pos3)
                  <*> vel3
                  <*> (pure Player)
   where
-    pos3 :: (HasTime t s) => Wire s () IO a FOPosition
-    pos3 = FOVector <$> (fst <$> (axis kpX limX))
+    pos3 :: (HasTime t s) => Wire s () IO a Vec3
+    pos3 = (,,) <$> (fst <$> (axis kpX limX))
                     <*> (fst <$> (axis kpY limY))
                     <*> (pure 0.0)
-    vel3 :: (HasTime t s) => Wire s () IO a FOVelocity
-    vel3 = FOVector <$> (snd <$> (axis kpX limX))
+    vel3 :: (HasTime t s) => Wire s () IO a Vec3
+    vel3 = (,,) <$> (snd <$> (axis kpX limX))
                     <*> (snd <$> (axis kpY limY))
                     <*> (pure 0.0)
 
@@ -119,8 +119,8 @@ boxshift x y = newMatrix RowMajor [ 1, 0, 0, -(realToFrac x :: GLfloat)
                                   , 0, 0, 0, 1
                                   ]
 
-renderPlayer :: FOPosition -> IO ()
-renderPlayer (FOVector x y _) = do
+renderPlayer :: Vec3 -> IO ()
+renderPlayer (x, y, _) = do
   matrixMode $= Projection
   loadIdentity
   boxdepth >>= multMatrix

@@ -1,18 +1,12 @@
 -- Identified Flying Objects
 
-module IFOs ( FOVector(..)
-        , FOPosition
-        , FOVelocity
+module IFOs ( Vec3(..)
         , FORender
         , FONature(..)
         , IFO(..)
         , foIsA) where
 
-data FOVector = FOVector Double Double Double
-
-type FOPosition = FOVector
-
-type FOVelocity = FOVector
+type Vec3 = (Double, Double, Double) -- (x, y, z) components
 
 type FORender = IO ()
 
@@ -20,8 +14,8 @@ data FONature = Player | Projectile | GreenMonster | RedMonster
   deriving (Show, Eq)
 
 data IFO = IFO  { render :: FORender
-                , pos    :: FOPosition
-                , vel    :: FOVelocity
+                , pos    :: Vec3
+                , vel    :: Vec3
                 , nature :: FONature
                 }
 
