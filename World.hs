@@ -13,12 +13,7 @@ import Graphics.UI.GLFW
 import IFOs
 import Player
 import Monster
-
--- to me moved to their respective modules
-data Projectile = Projectile LocVel
-projectilesWire :: Wire s () IO a [Projectile]
-projectilesWire = (:[]) <$> (pure $ Projectile ((0,0,0),(0,0,0)))
--- end of to me moved to their respective modules
+import Projectile
 
 data World = World Player [Monster] [Projectile]
 
@@ -36,6 +31,6 @@ renderWorld size (World player monsters projectiles) = do
   clear [ColorBuffer, DepthBuffer]
   renderPlayer size player
   mapM_ (renderMonster size) monsters
-  -- mapM_ renderProjectile size projectiles
+  mapM_ (renderProjectile size) projectiles
   renderHUD size player
   swapBuffers

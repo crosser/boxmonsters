@@ -18,7 +18,7 @@ data Monster = Monster LocVel MonsterLevel
 
 hv = 0.05
 
--- Functional part. Player is a wire controlled by keypresses.
+-- Functional part.
 
 monsterWire :: Wire s () IO a Monster
 monsterWire = pure $ Monster ((0,0,1),(0,0,1)) GreenMonster
