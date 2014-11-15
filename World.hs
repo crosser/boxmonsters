@@ -26,7 +26,7 @@ worldWire = proc _ -> do
   projectiles <- projectilesWire -< ()
   returnA -< World player monsters projectiles
 
-renderWorld :: Size -> World -> IO ()
+renderWorld :: (Double, Double) -> World -> IO ()
 renderWorld size (World player monsters projectiles) = do
   clear [ColorBuffer, DepthBuffer]
   renderPlayer size player

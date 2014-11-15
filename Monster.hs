@@ -35,7 +35,7 @@ renderFace (x, y, z) =
     , (x-hv, y+hv, z)
     ]
 
-renderMonster :: Size -> Monster -> IO ()
+renderMonster :: (Double, Double) -> Monster -> IO ()
 renderMonster _ (Monster (loc, _) level) = do
   -- matrixMode $= Modelview 0
   -- loadIdentity

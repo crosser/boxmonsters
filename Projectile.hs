@@ -33,7 +33,7 @@ renderShaft (x, y, z) outgoing = do
   renderPrimitive Lines $ mapM_ vertex3d 
     [ (x, y, z), (x, y, z-(if outgoing then hv; else (-hv))) ]
 
-renderProjectile :: Size -> Projectile -> IO ()
+renderProjectile :: (Double, Double) -> Projectile -> IO ()
 renderProjectile _ (Projectile (loc, (_, _, vz))) = do
   -- matrixMode $= Modelview 0
   -- loadIdentity

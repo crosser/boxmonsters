@@ -21,8 +21,18 @@ import Data.IORef
 import IFOs
 import World
 
-runWire :: (HasTime t s) =>
-  (IORef Bool, IORef Size) -> Session IO s -> Wire s e IO a World -> IO ()
+initialWSize = Size 640 480
+
+-- | Normalize such that shorter dimetion is 1., longer is >1.
+normWSize :: Size -> (Double, Double)
+normWSize (Size x y)
+  | x > y = (fromIntegral x / fromIntegral y, 1)
+  | otherwise = (1, fromIntegral y / fromIntegral x)
+
+runWire :: (HasTime t s)
+  => (IORef Bool, IORef (Double, Double))
+  -> Session IO s -> Wire s e IO (Double, Double) World
+  -> IO ()
 runWire (closedRef, sizeRef) session wire = do
   pollEvents
   closed <- readIORef closedRef
@@ -32,7 +42,7 @@ runWire (closedRef, sizeRef) session wire = do
     then return ()
     else do
       (st , session') <- stepSession session
-      (wt', wire'   ) <- stepWire wire st $ Right undefined
+      (wt', wire'   ) <- stepWire wire st $ Right size -- FIXME is this ok?
       case wt' of
         Left  _ -> return ()
         Right worldstate -> do
@@ -42,13 +52,13 @@ runWire (closedRef, sizeRef) session wire = do
 main :: IO ()
 main = do
   initialize
-  openWindow (Size 640 480)
+  openWindow initialWSize
                         [ DisplayRGBBits 8 8 8
                         , DisplayAlphaBits 8
                         , DisplayDepthBits 24
                         ] Window
   closedRef <- newIORef False
-  sizeRef <- newIORef (Size 640 480)
+  sizeRef <- newIORef (normWSize initialWSize)
   windowCloseCallback $= do
     writeIORef closedRef True
     return True
@@ -61,9 +71,9 @@ main = do
   lineWidth $= 1.5
   pointSize $= 5
   clearColor $= Color4 0 0 1 0
-  windowSizeCallback $= \ size@(Size w h) ->
+  windowSizeCallback $= \ size ->
     do
-      writeIORef sizeRef size
+      writeIORef sizeRef (normWSize size)
       viewport $= (Position 0 0, size)
 
   runWire (closedRef, sizeRef) clockSession_ worldWire
