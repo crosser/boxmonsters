@@ -31,22 +31,39 @@ normWSize (Size x y)
 
 runWire :: (HasTime t s)
   => (IORef Bool, IORef (Double, Double))
-  -> Session IO s -> Wire s e IO (Double, Double) World
+  -> Session IO s -> Wire s e IO Inputs World
   -> IO ()
 runWire (closedRef, sizeRef) session wire = do
   pollEvents
   closed <- readIORef closedRef
-  size <- readIORef sizeRef
-  esc <- getKey ESC
-  if closed || (esc == Press)
+  nsize  <- readIORef sizeRef
+  esc    <- getKey ESC
+  up     <- getKey UP
+  down   <- getKey DOWN
+  left   <- getKey LEFT
+  right  <- getKey RIGHT
+  fire   <- getKey ' '
+  let
+    steer k1 k2 = case (k1, k2) of
+      (Press,   Press)   -> Stay
+      (Press,   Release) -> Decr
+      (Release, Press)   -> Incr
+      (Release, Release) -> Stay
+    inputs = Inputs { steerX        = steer down up
+                    , steerY        = steer left right
+                    , firePressed   = (fire == Press)
+                    , escapePressed = (esc  == Press)
+                    , normSize      = nsize
+                    }
+  if closed
     then return ()
     else do
       (st , session') <- stepSession session
-      (wt', wire'   ) <- stepWire wire st $ Right size
+      (wt', wire'   ) <- stepWire wire st $ Right inputs
       case wt' of
         Left  _ -> return ()
         Right worldstate -> do
-          renderWorld size worldstate
+          renderWorld nsize worldstate
           runWire (closedRef, sizeRef) session' wire'
 
 main :: IO ()

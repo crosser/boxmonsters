@@ -71,6 +71,8 @@ location lim = clamp lim . integral 0
       | x > hi    = Right (hi, (True, False))
       | otherwise = Right (x,  (True, True))
 
+-- | Produce (location, velocity) tuple, honoring limits
+
 axis :: (HasTime t s)
      => (SpecialKey, SpecialKey)        -- key pair
      -> (Double, Double)                -- limits
@@ -80,7 +82,7 @@ axis kp lims = proc _ -> do
       vel <- velocity kp -< lim
   returnA -< (pos, vel)
 
-playerWire :: (HasTime t s) => Wire s () IO (Double, Double) Player
+playerWire :: (HasTime t s) => Wire s () IO Inputs Player
 playerWire = Player <$> locvel <*> (launch . locvel)
   where
     locvel :: (HasTime t s) => Wire s () IO a LocVel
