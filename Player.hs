@@ -35,7 +35,7 @@ isKeyDown k = mkGen_ $ \x -> do
     Release -> Left  mempty
 
 launch :: (Monoid e) => Wire s e IO a (Event a)
-launch = once . now . isKeyDown ENTER <|> never
+launch = once . now . isKeyDown ' ' <|> never
 {-
 shooting = hold (isKeyDown ENTER) >>> (once --> coolDown >>> shooting)
   where
