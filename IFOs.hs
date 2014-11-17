@@ -11,7 +11,7 @@ type Vec3 = (Double, Double, Double)    -- (x, y, z) components
 type LocVel = (Vec3, Vec3)              -- (location, velocity)
 type Launch = Event LocVel
 
-data Steer = Decr | Stay | Incr
+data Steer = Decr | Stay | Incr deriving Eq
 data Inputs = Inputs { steerX        :: Steer
                      , steerY        :: Steer
                      , firePressed   :: Bool

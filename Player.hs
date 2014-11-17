@@ -4,6 +4,7 @@ module Player (Player(Player), playerWire, renderPlayer, renderHUD) where
 
 import Prelude hiding ((.), id)
 
+import Control.Monad.Fix
 import Control.Wire
 import FRP.Netwire
 
@@ -15,7 +16,7 @@ import IFOs
 
 data Player = Player LocVel Launch
 
--- Functional part. Player is a wire controlled by keypresses.
+-- Functional part.
 
 -- game constants
 speed = 0.5
@@ -23,19 +24,8 @@ hvsize = 0.05
 limX = (hvsize-1.0, 1.0-hvsize)
 limY = (hvsize-1.0, 1.0-hvsize)
 
--- key pairs for X and Y control
-kpX = (LEFT, RIGHT)
-kpY = (DOWN, UP)
-
-isKeyDown :: (Enum k, Monoid e) => k -> Wire s e IO a a
-isKeyDown k = mkGen_ $ \x -> do
-  s <- getKey k
-  return $ case s of
-    Press   -> Right x
-    Release -> Left  mempty
-
-launch :: (Monoid e) => Wire s e IO a (Event a)
-launch = once . now . isKeyDown ' ' <|> never
+--launch :: (Monoid e) => Wire s e m LocVel (Event LocVel)
+--launch = became firePressed
 {-
 shooting = hold (isKeyDown ENTER) >>> (once --> coolDown >>> shooting)
   where
@@ -43,24 +33,24 @@ shooting = hold (isKeyDown ENTER) >>> (once --> coolDown >>> shooting)
       arr head . multicast [ after 0.05, hold (not . isKeyDown ENTER) ]
 -}
 
-aboveLo :: (Monoid e) => Wire s e m (Bool, Bool) e
-aboveLo = mkPure_ $ \hit -> if (fst hit) then Right mempty else Left mempty
-belowHi :: (Monoid e) => Wire s e m (Bool, Bool) e
-belowHi = mkPure_ $ \hit -> if (snd hit) then Right mempty else Left mempty
-ignLim  :: (Monoid e) => Wire s e m (Bool, Bool) e
-ignLim  = mkPure_ $ \_ -> Right mempty
+aboveLo :: (Monoid e) => Wire s e m (Inputs, (Bool, Bool)) (Inputs, (Bool, Bool))
+aboveLo = when $ \(_, (lo, _ )) -> lo
+belowHi :: (Monoid e) => Wire s e m (Inputs, (Bool, Bool)) (Inputs, (Bool, Bool))
+belowHi = when $ \(_, (_ , hi)) -> hi
 
-velocity :: (Monoid e)
-         => (SpecialKey, SpecialKey)
-         -> Wire s e IO (Bool, Bool) Double
-velocity kp = pure (   0.0) . isKeyDown (fst kp) . isKeyDown (snd kp) . ignLim
-          <|> pure (-speed) . isKeyDown (fst kp) . aboveLo
-          <|> pure ( speed) . isKeyDown (snd kp) . belowHi
-          <|> pure (   0.0) . ignLim
+movecmd :: (Inputs -> Steer) -> Steer -> (Inputs, (Bool, Bool)) -> Bool
+movecmd xy decrincr (inputs, (_, _)) = (xy inputs) == decrincr
 
-location :: (HasTime t s)
+velocity :: (Monad m, Monoid e)
+         => (Inputs -> Steer)
+         -> Wire s e m (Inputs, (Bool, Bool)) Double
+velocity xy = pure (-speed) . when (movecmd xy Decr) . aboveLo
+          <|> pure ( speed) . when (movecmd xy Incr) . belowHi
+          <|> pure (   0.0) -- . when (movecmd xy Stay)
+
+location :: (HasTime t s, Monad m)
          => (Double, Double)
-         -> Wire s () IO Double (Double, (Bool, Bool))
+         -> Wire s () m Double (Double, (Bool, Bool))
 location lim = clamp lim . integral 0
   where
     clamp :: (Double, Double) -> Wire s e m Double (Double, (Bool, Bool))
@@ -73,28 +63,28 @@ location lim = clamp lim . integral 0
 
 -- | Produce (location, velocity) tuple, honoring limits
 
-axis :: (HasTime t s)
-     => (SpecialKey, SpecialKey)        -- key pair
+axis :: (HasTime t s, MonadFix m)
+     => (Inputs -> Steer)
      -> (Double, Double)                -- limits
-     -> Wire s () IO a (Double, Double)   -- (location, velocity) for one axis
-axis kp lims = proc _ -> do
+     -> Wire s () m Inputs (Double, Double) -- (location, velocity) for axis
+axis xy lims = proc inputs -> do
   rec (pos, lim) <- location lims -< vel
-      vel <- velocity kp -< lim
+      vel <- velocity xy -< (inputs, lim)
   returnA -< (pos, vel)
 
-playerWire :: (HasTime t s) => Wire s () IO Inputs Player
-playerWire = Player <$> locvel <*> (launch . locvel)
+playerWire :: (HasTime t s, MonadFix m) => Wire s () m Inputs Player
+playerWire = Player <$> locvel <*> never . locvel -- (now . locvel . (when firePressed))
   where
-    locvel :: (HasTime t s) => Wire s () IO a LocVel
+    locvel :: (HasTime t s, MonadFix m) => Wire s () m Inputs LocVel
     locvel = (,) <$> loc3 <*> vel3
-    loc3 :: (HasTime t s) => Wire s () IO a Vec3
-    loc3 = (,,) <$> (fst <$> (axis kpX limX))
-                    <*> (fst <$> (axis kpY limY))
-                    <*> (pure 0.0)
-    vel3 :: (HasTime t s) => Wire s () IO a Vec3
-    vel3 = (,,) <$> (snd <$> (axis kpX limX))
-                    <*> (snd <$> (axis kpY limY))
-                    <*> (pure 0.0)
+    loc3 :: (HasTime t s, MonadFix m) => Wire s () m Inputs Vec3
+    loc3 = (,,) <$> (fst <$> (axis steerX limX))
+                <*> (fst <$> (axis steerY limY))
+                <*> (pure 0.5)
+    vel3 :: (HasTime t s, MonadFix m) => Wire s () m Inputs Vec3
+    vel3 = (,,) <$> (snd <$> (axis steerX limX))
+                <*> (snd <$> (axis steerY limY))
+                <*> (pure 0.0)
 
 -- Rendering Player. Because it is not visible, the "rendering" is
 -- in fact setting up the scene (box, perspective and crosshair).
