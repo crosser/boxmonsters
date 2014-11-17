@@ -17,11 +17,11 @@ import Projectile
 
 data World = World Player [Monster] [Projectile]
 
-worldWire :: (HasTime t s) => Wire s () IO a World
+worldWire :: (HasTime t s) => Wire s () IO (Double, Double) World
 -- For now, just compose all wires.
 -- Must also create monsters and handle collisions.
-worldWire = proc _ -> do
-  player@(Player locvel launch) <- playerWire -< ()
+worldWire = proc size -> do
+  player@(Player locvel launch) <- playerWire -< size
   monsters <- monstersWire -< ()
   projectiles <- projectilesWire -< ()
   returnA -< World player monsters projectiles

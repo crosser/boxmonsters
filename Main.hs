@@ -42,7 +42,7 @@ runWire (closedRef, sizeRef) session wire = do
     then return ()
     else do
       (st , session') <- stepSession session
-      (wt', wire'   ) <- stepWire wire st $ Right size -- FIXME is this ok?
+      (wt', wire'   ) <- stepWire wire st $ Right size
       case wt' of
         Left  _ -> return ()
         Right worldstate -> do

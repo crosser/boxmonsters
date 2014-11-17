@@ -80,7 +80,7 @@ axis kp lims = proc _ -> do
       vel <- velocity kp -< lim
   returnA -< (pos, vel)
 
-playerWire :: (HasTime t s) => Wire s () IO a Player
+playerWire :: (HasTime t s) => Wire s () IO (Double, Double) Player
 playerWire = Player <$> locvel <*> (launch . locvel)
   where
     locvel :: (HasTime t s) => Wire s () IO a LocVel
