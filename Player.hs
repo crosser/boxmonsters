@@ -20,48 +20,53 @@ data Player = Player LocVel Launch
 -- game constants
 speed = 0.5
 hvsize = 0.05
-limX = (hvsize-1.0, 1.0-hvsize)
-limY = (hvsize-1.0, 1.0-hvsize)
 
--- | Player velocity by axis x or y (defined by accessor steerX/steerY).
+-- | Player velocity by axis x or y (defined by X or Y).
 -- Clamping passed over from `location` as (aboveLow, belowHigh) Bool pair.
+-- Output velocity.
 
 velocity :: (MonadFix m, Monoid e)
-         => (Inputs -> Steer)
+         => XorY
          -> Wire s e m (Inputs, (Bool, Bool)) Double
 velocity xy = pure (-speed) . when (movecmd xy Decr)
                             . when (\(_, (lo, _ )) -> lo)
           <|> pure ( speed) . when (movecmd xy Incr)
                             . when (\(_, (_ , hi)) -> hi)
-          <|> pure (   0.0) -- . when (movecmd xy Stay)
+          <|> pure (     0) -- . when (movecmd (xy . steerXY) Stay)
   where
-    movecmd xy decrincr (inputs, (_, _)) = (xy inputs) == decrincr
+    movecmd xy decrincr (inputs, (_, _)) = (steer xy inputs) == decrincr
 
--- | Player location by one axis.
--- Input to be changed FIXME
+-- | Player location by axis x or y (defined by X or Y).
+-- Input is (inputs, velocity).
 -- Output coordinate and (aboveLow, belowHigh) Bool pair.
 
 location :: (HasTime t s, MonadFix m)
-         => (Double, Double)
-         -> Wire s () m Double (Double, (Bool, Bool))
-location lim = clamp lim . integral 0
-  where
-    clamp :: (Double, Double) -> Wire s e m Double (Double, (Bool, Bool))
-    clamp lim = mkPure_ $ clamp' lim
-    clamp' :: (Double, Double) -> Double -> Either e (Double, (Bool, Bool))
-    clamp' (lo, hi) x
-      | x < lo    = Right (lo, (False, True))
-      | x > hi    = Right (hi, (True, False))
-      | otherwise = Right (x,  (True, True))
+         => XorY
+         -> Wire s () m (Inputs, Double) (Double, (Bool, Bool))
+location xy = proc (inputs, vel) -> do
+  rawloc <- integral 0 -< vel
+  size <- mkSF_ (nsize xy) -< inputs
+  clamped <- clamp -< (rawloc, size)
+  returnA -< clamped
+    where
+      clamp :: Wire s e m (Double, Double) (Double, (Bool, Bool))
+      clamp = mkPure_ $ clamp'
+      clamp' :: (Double, Double) -> Either e (Double, (Bool, Bool))
+      clamp' (x, size)
+        | x < lo    = Right (lo, (False, True))
+        | x > hi    = Right (hi, (True, False))
+        | otherwise = Right (x,  (True, True))
+        where
+          lo = hvsize - size
+          hi = size - hvsize
 
--- | Produce (location, velocity) tuple, honoring limits
+-- | Produce (location, velocity) tuple, honoring limits, by one axis
 
 axis :: (HasTime t s, MonadFix m)
-     => (Inputs -> Steer)
-     -> (Double, Double)                -- limits
+     => XorY
      -> Wire s () m Inputs (Double, Double) -- (location, velocity) for axis
-axis xy lims = proc inputs -> do
-  rec (pos, lim) <- location lims -< vel
+axis xy = proc inputs -> do
+  rec (pos, lim) <- location xy -< (inputs, vel)
       vel <- velocity xy -< (inputs, lim)
   returnA -< (pos, vel)
 
@@ -71,12 +76,12 @@ playerWire = Player <$> locvel <*> launch
     locvel :: (HasTime t s, MonadFix m) => Wire s () m Inputs LocVel
     locvel = (,) <$> loc3 <*> vel3
     loc3 :: (HasTime t s, MonadFix m) => Wire s () m Inputs Vec3
-    loc3 = (,,) <$> (fst <$> (axis steerX limX))
-                <*> (fst <$> (axis steerY limY))
+    loc3 = (,,) <$> (fst <$> (axis X))
+                <*> (fst <$> (axis Y))
                 <*> (pure 0.5)
     vel3 :: (HasTime t s, MonadFix m) => Wire s () m Inputs Vec3
-    vel3 = (,,) <$> (snd <$> (axis steerX limX))
-                <*> (snd <$> (axis steerY limY))
+    vel3 = (,,) <$> (snd <$> (axis X))
+                <*> (snd <$> (axis Y))
                 <*> (pure 0.0)
     launch :: Wire s () m Inputs Launch
     launch = never

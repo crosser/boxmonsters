@@ -50,8 +50,7 @@ runWire (closedRef, sizeRef) session wire = do
       (Press,   Release) -> Decr
       (Release, Press)   -> Incr
       (Release, Release) -> Stay
-    inputs = Inputs { steerX        = steer left right
-                    , steerY        = steer down up
+    inputs = Inputs { steerXY       = (steer left right, steer down up)
                     , firePressed   = (fire == Press)
                     , escapePressed = (esc  == Press)
                     , normSize      = nsize
