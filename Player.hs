@@ -51,7 +51,6 @@ location xy = proc (inputs, vel) -> do
     where
       clamp :: Wire s e m (Double, Double) (Double, (Bool, Bool))
       clamp = mkPure_ $ clamp'
-      clamp' :: (Double, Double) -> Either e (Double, (Bool, Bool))
       clamp' (x, size)
         | x < lo    = Right (lo, (False, True))
         | x > hi    = Right (hi, (True, False))
@@ -73,16 +72,9 @@ axis xy = proc inputs -> do
 playerWire :: (HasTime t s, MonadFix m) => Wire s () m Inputs Player
 playerWire = Player <$> locvel <*> launch
   where
-    locvel :: (HasTime t s, MonadFix m) => Wire s () m Inputs LocVel
     locvel = (,) <$> loc3 <*> vel3
-    loc3 :: (HasTime t s, MonadFix m) => Wire s () m Inputs Vec3
-    loc3 = (,,) <$> (fst <$> (axis X))
-                <*> (fst <$> (axis Y))
-                <*> (pure 0.5)
-    vel3 :: (HasTime t s, MonadFix m) => Wire s () m Inputs Vec3
-    vel3 = (,,) <$> (snd <$> (axis X))
-                <*> (snd <$> (axis Y))
-                <*> (pure 0.0)
+    loc3 = (,,) <$> (fst <$> axis X) <*> (fst <$> axis Y) <*> (pure 0.5)
+    vel3 = (,,) <$> (snd <$> axis X) <*> (snd <$> axis Y) <*> (pure 0.0)
     launch :: Wire s () m Inputs Launch
     launch = never
     -- launch = became firePressed now . locvel . (when firePressed)
@@ -109,10 +101,10 @@ renderBox kx ky =
 renderXHair :: Double -> Double -> IO ()
 renderXHair x y =
   mapM_ (renderPrimitive Lines . mapM_ vertex3d)
-    [ [((x-0.01),      y , 0.5), ((x-0.02),      y , 0.5)]
-    , [((x+0.01),      y , 0.5), ((x+0.02),      y , 0.5)]
-    , [(     x , (y-0.01), 0.5), (     x , (y-0.02), 0.5)]
-    , [(     x , (y+0.01), 0.5), (     x , (y+0.02), 0.5)]
+    [ [((x-0.01),      y , 0.5), ((x-0.03),      y , 0.5)]
+    , [((x+0.01),      y , 0.5), ((x+0.03),      y , 0.5)]
+    , [(     x , (y-0.01), 0.5), (     x , (y-0.03), 0.5)]
+    , [(     x , (y+0.01), 0.5), (     x , (y+0.03), 0.5)]
     ]
 
 boxdepth :: IO (GLmatrix GLfloat)
@@ -150,9 +142,11 @@ renderPlayer (kx, ky) (Player ((x, y, _), _) _) = do
   boxdepth >>= multMatrix
   boxshift x y >>= multMatrix
   color4d (1, 1, 1, 1)
+  lineWidth $= 1.5
   renderBox kx ky
 
 renderHUD :: (Double, Double) -> Player -> IO ()
 renderHUD _ (Player ((x, y, _), _) _) = do
-  color4d (0, 0, 0, 1)
+  color4d (1, 0, 1, 1)
+  lineWidth $= 0.5
   renderXHair x y

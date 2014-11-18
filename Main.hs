@@ -81,7 +81,6 @@ main = do
   lineSmooth $= Enabled
   blend $= Enabled
   blendFunc $= (SrcAlpha, OneMinusSrcAlpha)
-  lineWidth $= 1.5
   pointSize $= 5
   clearColor $= Color4 0 0 1 0
   windowCloseCallback $= do
