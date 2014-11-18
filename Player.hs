@@ -23,29 +23,23 @@ hvsize = 0.05
 limX = (hvsize-1.0, 1.0-hvsize)
 limY = (hvsize-1.0, 1.0-hvsize)
 
---launch :: (Monoid e) => Wire s e m LocVel (Event LocVel)
---launch = became firePressed
-{-
-shooting = hold (isKeyDown ENTER) >>> (once --> coolDown >>> shooting)
-  where
-    coolDown =
-      arr head . multicast [ after 0.05, hold (not . isKeyDown ENTER) ]
--}
-
-aboveLo :: (Monoid e) => Wire s e m (Inputs, (Bool, Bool)) (Inputs, (Bool, Bool))
-aboveLo = when $ \(_, (lo, _ )) -> lo
-belowHi :: (Monoid e) => Wire s e m (Inputs, (Bool, Bool)) (Inputs, (Bool, Bool))
-belowHi = when $ \(_, (_ , hi)) -> hi
-
-movecmd :: (Inputs -> Steer) -> Steer -> (Inputs, (Bool, Bool)) -> Bool
-movecmd xy decrincr (inputs, (_, _)) = (xy inputs) == decrincr
+-- | Player velocity by axis x or y (defined by accessor steerX/steerY).
+-- Clamping passed over from `location` as (aboveLow, belowHigh) Bool pair.
 
 velocity :: (MonadFix m, Monoid e)
          => (Inputs -> Steer)
          -> Wire s e m (Inputs, (Bool, Bool)) Double
-velocity xy = pure (-speed) . when (movecmd xy Decr) . aboveLo
-          <|> pure ( speed) . when (movecmd xy Incr) . belowHi
+velocity xy = pure (-speed) . when (movecmd xy Decr)
+                            . when (\(_, (lo, _ )) -> lo)
+          <|> pure ( speed) . when (movecmd xy Incr)
+                            . when (\(_, (_ , hi)) -> hi)
           <|> pure (   0.0) -- . when (movecmd xy Stay)
+  where
+    movecmd xy decrincr (inputs, (_, _)) = (xy inputs) == decrincr
+
+-- | Player location by one axis.
+-- Input to be changed FIXME
+-- Output coordinate and (aboveLow, belowHigh) Bool pair.
 
 location :: (HasTime t s, MonadFix m)
          => (Double, Double)
@@ -72,7 +66,7 @@ axis xy lims = proc inputs -> do
   returnA -< (pos, vel)
 
 playerWire :: (HasTime t s, MonadFix m) => Wire s () m Inputs Player
-playerWire = Player <$> locvel <*> never . locvel -- (now . locvel . (when firePressed))
+playerWire = Player <$> locvel <*> launch
   where
     locvel :: (HasTime t s, MonadFix m) => Wire s () m Inputs LocVel
     locvel = (,) <$> loc3 <*> vel3
@@ -84,6 +78,16 @@ playerWire = Player <$> locvel <*> never . locvel -- (now . locvel . (when fireP
     vel3 = (,,) <$> (snd <$> (axis steerX limX))
                 <*> (snd <$> (axis steerY limY))
                 <*> (pure 0.0)
+    launch :: Wire s () m Inputs Launch
+    launch = never
+    -- launch = became firePressed now . locvel . (when firePressed)
+    {-
+    shooting = hold (isKeyDown ENTER) >>> (once --> coolDown >>> shooting)
+      where
+        coolDown =
+          arr head . multicast [ after 0.05, hold (not . isKeyDown ENTER) ]
+    -}
+
 
 -- Rendering Player. Because it is not visible, the "rendering" is
 -- in fact setting up the scene (box, perspective and crosshair).
