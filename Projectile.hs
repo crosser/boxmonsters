@@ -18,7 +18,7 @@ hv = 0.1
 -- Functional part.
 
 data Projectile = Projectile LocVel
-projectilesWire :: (MonadFix m) => Wire s () m a [Projectile]
+projectilesWire :: (MonadFix m) => Wire s () m ([Projectile], Launch) [Projectile]
 projectilesWire = (:[]) <$> (pure $ Projectile ((0,0,0.5),(0,0,0.1)))
 
 -- Rendering projectile.

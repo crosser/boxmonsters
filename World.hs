@@ -22,8 +22,9 @@ worldWire = run . unless escapePressed
   where
     run = proc inputs -> do
       player@(Player locvel launch) <- playerWire -< inputs
-      monsters <- monstersWire -< ()
-      projectiles <- projectilesWire -< launch
+      rec
+        monsters <- monstersWire -< monsters
+        projectiles <- projectilesWire -< (projectiles, launch)
       returnA -< World player monsters projectiles
 
 renderWorld :: (Double, Double) -> World -> IO ()

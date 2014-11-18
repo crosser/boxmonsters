@@ -20,10 +20,11 @@ hv = 0.05
 
 -- Functional part.
 
+monstersWire :: (MonadFix m) => Wire s () m [Monster] [Monster]
+monstersWire = (:[]) <$> monsterWire
+
 monsterWire :: (MonadFix m) => Wire s () m a Monster
 monsterWire = pure $ Monster ((0,0,1),(0,0,1)) GreenMonster
-monstersWire :: (MonadFix m) => Wire s () m a [Monster]
-monstersWire = (:[]) <$> monsterWire
 
 -- Rendering Monster.
 
