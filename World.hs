@@ -30,9 +30,7 @@ worldWire = run . unless escapePressed
 
 renderWorld :: (Double, Double) -> World -> IO ()
 renderWorld size (World player monsters projectiles) = do
-  clear [ColorBuffer, DepthBuffer]
   renderPlayer size player
   mapM_ (renderMonster size) monsters
   mapM_ (renderProjectile size) projectiles
   renderHUD size player
-  swapBuffers

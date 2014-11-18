@@ -34,7 +34,7 @@ runWire :: (HasTime t s)
   -> Session IO s -> Wire s e IO Inputs World
   -> IO ()
 runWire (closedRef, sizeRef) session wire = do
-  pollEvents
+  -- pollEvents -- not necessary if we do swapBuffers
   closed <- readIORef closedRef
   nsize  <- readIORef sizeRef
   esc    <- getKey ESC
@@ -63,7 +63,9 @@ runWire (closedRef, sizeRef) session wire = do
       case wt' of
         Left  _ -> return ()
         Right worldstate -> do
+          clear [ColorBuffer, DepthBuffer]
           renderWorld nsize worldstate
+          swapBuffers
           runWire (closedRef, sizeRef) session' wire'
 
 main :: IO ()
