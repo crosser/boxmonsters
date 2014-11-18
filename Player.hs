@@ -97,13 +97,13 @@ playerWire = Player <$> locvel <*> launch
 -- Rendering Player. Because it is not visible, the "rendering" is
 -- in fact setting up the scene (box, perspective and crosshair).
 
-renderBox :: IO ()
-renderBox =
+renderBox :: Double -> Double -> IO ()
+renderBox kx ky =
   mapM_ (renderPrimitive LineStrip . mapM_ vertex3d)
-    [ [((-1), (-1), 0), ((-1), (-1), 1), ((-1),   1 , 1)]
-    , [((-1),   1 , 0), ((-1),   1 , 1), (  1 ,   1 , 1)]
-    , [(  1 ,   1 , 0), (  1 ,   1 , 1), (  1 , (-1), 1)]
-    , [(  1 , (-1), 0), (  1 , (-1), 1), ((-1), (-1), 1)]
+    [ [((-kx), (-ky), 0), ((-kx), (-ky), 1), ((-kx),   ky , 1)]
+    , [((-kx),   ky , 0), ((-kx),   ky , 1), (  kx ,   ky , 1)]
+    , [(  kx ,   ky , 0), (  kx ,   ky , 1), (  kx , (-ky), 1)]
+    , [(  kx , (-ky), 0), (  kx , (-ky), 1), ((-kx), (-ky), 1)]
     ]
 
 renderXHair :: Double -> Double -> IO ()
@@ -123,20 +123,34 @@ boxdepth = newMatrix RowMajor [ 1, 0, 0, 0
                               ]
 
 boxshift :: Double -> Double -> IO (GLmatrix GLfloat)
-boxshift x y = newMatrix RowMajor [ 1, 0, 0, -(realToFrac x :: GLfloat)
-                                  , 0, 1, 0, -(realToFrac y :: GLfloat)
+boxshift x y = newMatrix RowMajor [ 1, 0, 0, -(x')
+                                  , 0, 1, 0, -(y')
                                   , 0, 0, 1, 0
                                   , 0, 0, 0, 1
                                   ]
+  where
+    x' = realToFrac x :: GLfloat
+    y' = realToFrac y :: GLfloat
+
+boxscale :: Double -> Double -> IO (GLmatrix GLfloat)
+boxscale kx ky = newMatrix RowMajor [ 1/x', 0   , 0, 0
+                                    , 0   , 1/y', 0, 0
+                                    , 0   , 0   , 1, 0
+                                    , 0   , 0   , 0, 1
+                                    ]
+  where
+    x' = realToFrac kx :: GLfloat
+    y' = realToFrac ky :: GLfloat
 
 renderPlayer :: (Double, Double) -> Player -> IO ()
-renderPlayer _ (Player ((x, y, _), _) _) = do
+renderPlayer (kx, ky) (Player ((x, y, _), _) _) = do
   matrixMode $= Projection
   loadIdentity
+  boxscale kx ky >>= multMatrix
   boxdepth >>= multMatrix
   boxshift x y >>= multMatrix
   color4d (1, 1, 1, 1)
-  renderBox
+  renderBox kx ky
 
 renderHUD :: (Double, Double) -> Player -> IO ()
 renderHUD _ (Player ((x, y, _), _) _) = do
