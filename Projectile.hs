@@ -3,7 +3,7 @@
 module Projectile (Projectile(..), projectilesWire, renderProjectile) where
 
 import Prelude hiding ((.), id)
-
+import Control.Monad.Fix
 import Control.Wire
 import FRP.Netwire
 
@@ -18,7 +18,7 @@ hv = 0.1
 -- Functional part.
 
 data Projectile = Projectile LocVel
-projectilesWire :: Wire s () IO a [Projectile]
+projectilesWire :: (MonadFix m) => Wire s () m a [Projectile]
 projectilesWire = (:[]) <$> (pure $ Projectile ((0,0,0.5),(0,0,0.1)))
 
 -- Rendering projectile.

@@ -10,7 +10,6 @@
 
 import Prelude hiding ((.), id)
 import Control.Wire
-
 import Graphics.Rendering.OpenGL
 import Graphics.UI.GLFW
 import Data.IORef

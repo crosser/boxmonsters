@@ -3,7 +3,7 @@
 module Monster (Monster(..), monstersWire, renderMonster) where
 
 import Prelude hiding ((.), id)
-
+import Control.Monad.Fix
 import Control.Wire
 import FRP.Netwire
 
@@ -20,8 +20,9 @@ hv = 0.05
 
 -- Functional part.
 
-monsterWire :: Wire s () IO a Monster
+monsterWire :: (MonadFix m) => Wire s () m a Monster
 monsterWire = pure $ Monster ((0,0,1),(0,0,1)) GreenMonster
+monstersWire :: (MonadFix m) => Wire s () m a [Monster]
 monstersWire = (:[]) <$> monsterWire
 
 -- Rendering Monster.

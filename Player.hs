@@ -3,7 +3,6 @@
 module Player (Player(Player), playerWire, renderPlayer, renderHUD) where
 
 import Prelude hiding ((.), id)
-
 import Control.Monad.Fix
 import Control.Wire
 import FRP.Netwire
@@ -41,14 +40,14 @@ belowHi = when $ \(_, (_ , hi)) -> hi
 movecmd :: (Inputs -> Steer) -> Steer -> (Inputs, (Bool, Bool)) -> Bool
 movecmd xy decrincr (inputs, (_, _)) = (xy inputs) == decrincr
 
-velocity :: (Monad m, Monoid e)
+velocity :: (MonadFix m, Monoid e)
          => (Inputs -> Steer)
          -> Wire s e m (Inputs, (Bool, Bool)) Double
 velocity xy = pure (-speed) . when (movecmd xy Decr) . aboveLo
           <|> pure ( speed) . when (movecmd xy Incr) . belowHi
           <|> pure (   0.0) -- . when (movecmd xy Stay)
 
-location :: (HasTime t s, Monad m)
+location :: (HasTime t s, MonadFix m)
          => (Double, Double)
          -> Wire s () m Double (Double, (Bool, Bool))
 location lim = clamp lim . integral 0

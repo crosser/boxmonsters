@@ -3,12 +3,10 @@
 module World where
 
 import Prelude hiding ((.), id)
-
+import Control.Monad.Fix
 import Control.Wire
-import FRP.Netwire
-
+--import FRP.Netwire -- will likely need it for collisions
 import Graphics.Rendering.OpenGL
-import Graphics.UI.GLFW
 
 import IFOs
 import Player
@@ -17,7 +15,7 @@ import Projectile
 
 data World = World Player [Monster] [Projectile]
 
-worldWire :: (HasTime t s) => Wire s () IO Inputs World
+worldWire :: (HasTime t s, MonadFix m) => Wire s () m Inputs World
 -- For now, just compose all wires.
 -- Must also create monsters and handle collisions.
 worldWire = run . unless escapePressed
