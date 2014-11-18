@@ -1,5 +1,3 @@
-{-# LANGUAGE Arrows #-}
-
 -- Identified Flying Objects
 
 module IFOs (Vec3, LocVel, Launch, Steer(..), Inputs(..)) where
