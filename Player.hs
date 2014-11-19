@@ -66,9 +66,9 @@ axis :: (HasTime t s, MonadFix m)
      => XYZ
      -> Wire s () m Inputs (Double, Double) -- (location, velocity) for axis
 axis xy = proc inputs -> do
-  rec (pos, lim) <- location xy -< (inputs, vel)
+  rec (loc, lim) <- location xy -< (inputs, vel)
       vel <- velocity xy -< (inputs, lim)
-  returnA -< (pos, vel)
+  returnA -< (loc, vel)
 
 -- | Player wire, produces location and event stream of launches
 
