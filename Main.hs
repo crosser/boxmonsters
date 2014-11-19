@@ -43,7 +43,8 @@ runWire (closedRef, sizeRef) session wire = do
   down   <- getKey DOWN
   left   <- getKey LEFT
   right  <- getKey RIGHT
-  fire   <- getKey ' '
+  enter  <- getKey ENTER
+  space  <- getKey ' '
   let
     steer k1 k2 = case (k1, k2) of
       (Press,   Press)   -> Stay
@@ -51,7 +52,7 @@ runWire (closedRef, sizeRef) session wire = do
       (Release, Press)   -> Incr
       (Release, Release) -> Stay
     inputs = Inputs { steerXY       = (steer left right, steer down up)
-                    , firePressed   = (fire == Press)
+                    , firePressed   = (enter == Press) || (space == Press)
                     , escapePressed = (esc  == Press)
                     , normSize      = nsize
                     }

@@ -19,6 +19,7 @@ data Player = Player LocVel Launch
 
 -- game constants
 speed = 0.5
+lspeed = 0.5
 hvsize = 0.05
 
 -- | Player velocity by axis x or y (defined by X or Y).
@@ -69,22 +70,18 @@ axis xy = proc inputs -> do
       vel <- velocity xy -< (inputs, lim)
   returnA -< (pos, vel)
 
+-- | Player wire, produces location and event stream of launches
+
 playerWire :: (HasTime t s, MonadFix m) => Wire s () m Inputs Player
 playerWire = Player <$> locvel <*> launch
   where
     locvel = (,) <$> loc3 <*> vel3
-    loc3 = (,,) <$> (fst <$> axis X) <*> (fst <$> axis Y) <*> (pure 0.5)
-    vel3 = (,,) <$> (snd <$> axis X) <*> (snd <$> axis Y) <*> (pure 0.0)
-    launch :: Wire s () m Inputs Launch
-    launch = never
-    -- launch = became firePressed now . locvel . (when firePressed)
-    {-
-    shooting = hold (isKeyDown ENTER) >>> (once --> coolDown >>> shooting)
       where
-        coolDown =
-          arr head . multicast [ after 0.05, hold (not . isKeyDown ENTER) ]
-    -}
-
+        loc3 = (,,) <$> (fst <$> axis X) <*> (fst <$> axis Y) <*> (pure 0.5)
+        vel3 = (,,) <$> (snd <$> axis X) <*> (snd <$> axis Y) <*> (pure 0.0)
+    launch = once . now . (launchlv <$> locvel) . when firePressed <|> never
+      where
+        launchlv (loc, (vx, vy, _)) = (loc, (vx, vy, lspeed))
 
 -- Rendering Player. Because it is not visible, the "rendering" is
 -- in fact setting up the scene (box, perspective and crosshair).
