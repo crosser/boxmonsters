@@ -5,7 +5,7 @@ module IFOs ( Vec3
             , Launch
             , Steer(..)
             , Inputs(..)
-            , XorY(..)
+            , XYZ(..)
             , steer
             , nsize) where
 
@@ -23,12 +23,14 @@ data Inputs = Inputs { steerXY       :: (Steer, Steer)
                      , normSize      :: (Double, Double)
                      }
 
-data XorY = X | Y
+data XYZ = X | Y | Z
 
-steer :: XorY -> Inputs -> Steer
+steer :: XYZ -> Inputs -> Steer
 steer X = fst . steerXY
 steer Y = snd . steerXY
+steer Z = error "no steering over Z axis"
 
-nsize :: XorY -> Inputs -> Double
+nsize :: XYZ -> Inputs -> Double
 nsize X = fst . normSize
 nsize Y = snd . normSize
+nsize Z = error "Z size not normalizable"

@@ -27,7 +27,7 @@ hvsize = 0.05
 -- Output velocity.
 
 velocity :: (MonadFix m, Monoid e)
-         => XorY
+         => XYZ
          -> Wire s e m (Inputs, (Bool, Bool)) Double
 velocity xy = pure (-speed) . when (movecmd xy Decr)
                             . when (\(_, (lo, _ )) -> lo)
@@ -42,7 +42,7 @@ velocity xy = pure (-speed) . when (movecmd xy Decr)
 -- Output coordinate and (aboveLow, belowHigh) Bool pair.
 
 location :: (HasTime t s, MonadFix m)
-         => XorY
+         => XYZ
          -> Wire s () m (Inputs, Double) (Double, (Bool, Bool))
 location xy = proc (inputs, vel) -> do
   rawloc <- integral 0 -< vel
@@ -63,7 +63,7 @@ location xy = proc (inputs, vel) -> do
 -- | Produce (location, velocity) tuple, honoring limits, by one axis
 
 axis :: (HasTime t s, MonadFix m)
-     => XorY
+     => XYZ
      -> Wire s () m Inputs (Double, Double) -- (location, velocity) for axis
 axis xy = proc inputs -> do
   rec (pos, lim) <- location xy -< (inputs, vel)
