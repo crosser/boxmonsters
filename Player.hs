@@ -50,11 +50,11 @@ location xy = proc (inputs, vel) -> do
   returnA -< clamped
     where
       clamp :: Wire s e m (Double, Double) (Double, (Bool, Bool))
-      clamp = mkPure_ $ clamp'
+      clamp = mkSF_ $ clamp'
       clamp' (x, size)
-        | x < lo    = Right (lo, (False, True))
-        | x > hi    = Right (hi, (True, False))
-        | otherwise = Right (x,  (True, True))
+        | x < lo    = (lo, (False, True))
+        | x > hi    = (hi, (True, False))
+        | otherwise = (x,  (True, True))
         where
           lo = hvsize - size
           hi = size - hvsize
