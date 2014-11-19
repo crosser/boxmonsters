@@ -101,10 +101,10 @@ renderBox kx ky =
 renderXHair :: Double -> Double -> IO ()
 renderXHair x y =
   mapM_ (renderPrimitive Lines . mapM_ vertex3d)
-    [ [((x-0.01),      y , 0.5), ((x-0.03),      y , 0.5)]
-    , [((x+0.01),      y , 0.5), ((x+0.03),      y , 0.5)]
-    , [(     x , (y-0.01), 0.5), (     x , (y-0.03), 0.5)]
-    , [(     x , (y+0.01), 0.5), (     x , (y+0.03), 0.5)]
+    [ [((x-0.02),      y , 0.5), ((x-0.05),      y , 0.5)]
+    , [((x+0.02),      y , 0.5), ((x+0.05),      y , 0.5)]
+    , [(     x , (y-0.02), 0.5), (     x , (y-0.05), 0.5)]
+    , [(     x , (y+0.02), 0.5), (     x , (y+0.05), 0.5)]
     ]
 
 boxdepth :: IO (GLmatrix GLfloat)
