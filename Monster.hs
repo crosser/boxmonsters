@@ -20,7 +20,7 @@ hv = 0.05
 
 -- Functional part.
 
-monstersWire :: (MonadFix m) => Wire s () m [Monster] [Monster]
+monstersWire :: (MonadFix m) => Wire s () m () [Monster]
 monstersWire = (:[]) <$> monsterWire
 
 monsterWire :: (MonadFix m) => Wire s () m a Monster

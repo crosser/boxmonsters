@@ -21,10 +21,10 @@ worldWire :: (HasTime t s, MonadFix m) => Wire s () m Inputs World
 worldWire = run . unless escapePressed
   where
     run = proc inputs -> do
-      player@(Player locvel launch) <- playerWire -< inputs
+      player@(Player locvel plaunch) <- playerWire -< inputs
       rec
-        monsters <- monstersWire -< monsters
-        projectiles <- projectilesWire -< (projectiles, launch)
+        monsters <- monstersWire -< ()
+        projectiles <- projectilesWire [] -< plaunch
       returnA -< World player monsters projectiles
 
 renderWorld :: (Double, Double) -> World -> IO ()
