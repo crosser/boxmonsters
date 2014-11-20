@@ -64,19 +64,30 @@ mkProjectile ((ilx, ily, ilz), (ivx, ivy, ivz)) = Projectile <$> locvel
                 <*> (snd <$> axis Y (ily, ivy))
                 <*> (snd <$> axis Z (ilz, ivz))
 
-collectLaunches :: (HasTime t s, MonadFix m)
+mergeLaunches :: (HasTime t s, MonadFix m)
                 => [Wire s () m a Projectile]
                 -> Wire s () m LocVel [Wire s () m a Projectile]
-collectLaunches ps = mkSFN $ \locvel ->
-  ps `seq` (ps, collectLaunches ((mkProjectile locvel):ps))
+mergeLaunches ps = mkSFN $ \locvel ->
+  ps `seq` (ps, mergeLaunches ((mkProjectile locvel):ps))
 
 foldProjectiles :: (HasTime t s, MonadFix m)
                 => Wire s () m [Wire s () m a Projectile] [Projectile]
-foldProjectiles = (:[]) <$> (pure $ Projectile ((0,0,0.5),(0,0,0.1))) -- FIXME
+foldProjectiles = pure []
 
 projectilesWire :: (HasTime t s, MonadFix m)
                 => Wire s () m Launch [Projectile]
-projectilesWire = foldProjectiles . (collectLaunches [] . hold <|> pure [])
+{-
+projectilesWire = proc launch -> do
+  rec
+    pws' <- mergeLaunches -< (pws, launch)
+    ps' <- foldProjectiles -< pws'
+    (pws, ps) <- filtProjectiles -< (pws', ps')
+  returnA -< ps
+-}
+-- projectilesWire = foldProjectiles . (mergeLaunches [] . hold <|> pure [])
+-- FIXME
+--projectilesWire = (:[]) <$> (pure $ Projectile ((0, 0, 0.5), (0, 0, 0.1)))
+projectilesWire = (:[]) <$> (mkProjectile ((0, 0, 0.5), (0, 0, 0.1)))
 
 -- Rendering projectile.
 
