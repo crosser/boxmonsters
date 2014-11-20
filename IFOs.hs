@@ -4,6 +4,7 @@ module IFOs ( Vec3
             , LocVel
             , Launch
             , Steer(..)
+            , Bounce(..)
             , Inputs(..)
             , XYZ(..)
             , steer
@@ -22,6 +23,8 @@ data Inputs = Inputs { steerXY       :: (Steer, Steer)
                      , escapePressed :: Bool
                      , normSize      :: (Double, Double)
                      }
+
+data Bounce = MkNeg | Keep | MkPos
 
 data XYZ = X | Y | Z
 

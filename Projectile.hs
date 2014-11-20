@@ -26,21 +26,25 @@ data Projectile = Projectile LocVel
 
 velocity :: (MonadFix m, Monoid e)
          => Double
-         -> Wire s e m Bool Double
-velocity iv = mkSFN $ \bounced ->
-  iv `seq` (iv, velocity (if bounced then -iv else iv))
+         -> Wire s e m Bounce Double
+velocity iv = mkSFN $ \bounce -> (iv, velocity (fixv iv bounce))
+  where
+    fixv iv bounce= case bounce of
+      MkNeg -> - abs iv
+      MkPos ->   abs iv
+      Keep  ->   iv
 
 location :: (HasTime t s, MonadFix m)
          => XYZ
          -> Double
-         -> Wire s () m Double (Double, Bool)
+         -> Wire s () m Double (Double, Bounce)
 location xyz il = checkbounce xyz . integral il
   where
-    checkbounce :: XYZ -> Wire s e m Double (Double, Bool)
+    checkbounce :: XYZ -> Wire s e m Double (Double, Bounce)
     checkbounce xyz = mkSF_ $ \loc ->
       case xyz of
-        Z -> if loc > bottom then ((2*bottom - loc), True) else (loc, False)
-        _ -> (loc, False)
+        Z -> if loc > bottom then ((2*bottom - loc), MkNeg) else (loc, Keep)
+        _ -> (loc, Keep)
 
 axis :: (HasTime t s, MonadFix m)
      => XYZ
