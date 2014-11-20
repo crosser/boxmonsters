@@ -17,7 +17,7 @@ hv = 0.1
 
 -- Functional part.
 
-zbottom = 1.0
+bottom = 1.0
 
 data Projectile = Projectile LocVel
 
@@ -39,7 +39,7 @@ location xyz il = checkbounce xyz . integral il
     checkbounce :: XYZ -> Wire s e m Double (Double, Bool)
     checkbounce xyz = mkSF_ $ \loc ->
       case xyz of
-        Z -> if loc > zbottom then ((2*zbottom - loc), True) else (loc, False)
+        Z -> if loc > bottom then ((2*bottom - loc), True) else (loc, False)
         _ -> (loc, False)
 
 axis :: (HasTime t s, MonadFix m)
@@ -64,15 +64,19 @@ mkProjectile ((ilx, ily, ilz), (ivx, ivy, ivz)) = Projectile <$> locvel
                 <*> (snd <$> axis Y (ily, ivy))
                 <*> (snd <$> axis Z (ilz, ivz))
 
+collectLaunches :: (HasTime t s, MonadFix m)
+                => [Wire s () m a Projectile]
+                -> Wire s () m LocVel [Wire s () m a Projectile]
+collectLaunches ps = mkSFN $ \locvel ->
+  ps `seq` (ps, collectLaunches ((mkProjectile locvel):ps))
+
+foldProjectiles :: (HasTime t s, MonadFix m)
+                => Wire s () m [Wire s () m a Projectile] [Projectile]
+foldProjectiles = (:[]) <$> (pure $ Projectile ((0,0,0.5),(0,0,0.1))) -- FIXME
+
 projectilesWire :: (HasTime t s, MonadFix m)
-                => [Projectile]
-                -> Wire s () m Launch [Projectile]
-{-
-projectilesWire ps = mkSFN $ \locvel ->
-  ps `seq` (ps, projectilesWire ((mkProjectile locvel):ps))
--}
-projectilesWire _ = (:[]) <$> (pure $ Projectile ((0,0,0.5),(0,0,0.1)))
---projectilesWire _ = (:[]) <$> (pure $ Projectile ((0,0,0.5),(0,0,0.1)))
+                => Wire s () m Launch [Projectile]
+projectilesWire = foldProjectiles . (collectLaunches [] . hold <|> pure [])
 
 -- Rendering projectile.
 

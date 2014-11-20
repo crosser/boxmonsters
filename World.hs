@@ -24,7 +24,7 @@ worldWire = run . unless escapePressed
       player@(Player locvel plaunch) <- playerWire -< inputs
       rec
         monsters <- monstersWire -< ()
-        projectiles <- projectilesWire [] -< plaunch
+        projectiles <- projectilesWire -< plaunch
       returnA -< World player monsters projectiles
 
 renderWorld :: (Double, Double) -> World -> IO ()
