@@ -27,8 +27,8 @@ data Projectile = Projectile LocVel
 velocity :: (MonadFix m, Monoid e)
          => Double
          -> Wire s e m Bounce Double
-velocity iv = mkSFN $ \bounce -> (iv, velocity (fixv iv bounce))
-  where
+velocity iv = mkSFN $ \bounce -> let v = fixv iv bounce in (v, velocity v)
+    where
     fixv iv bounce= case bounce of
       MkNeg -> - abs iv
       MkPos ->   abs iv
