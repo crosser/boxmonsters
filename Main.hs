@@ -23,15 +23,15 @@ initialWSize = Size 640 480
 
 -- | Normalize such that shorter dimetion is 1., longer is >1.
 
-normWSize :: Size -> (Double, Double)
+normWSize :: Size -> V3 Double
 normWSize (Size x y)
-  | x > y = (fromIntegral x / fromIntegral y, 1)
-  | otherwise = (1, fromIntegral y / fromIntegral x)
+  | x > y     = V3 (fromIntegral x / fromIntegral y) 1 1
+  | otherwise = V3 1 (fromIntegral y / fromIntegral x) 1
 
 -- | Run the outermost Wire giving it all the external inputs as signal
 
 runWire :: (HasTime t s)
-  => (IORef Bool, IORef (Double, Double))
+  => (IORef Bool, IORef (V3 Double))
   -> Session IO s -> Wire s e IO Inputs World
   -> IO ()
 runWire (closedRef, sizeRef) session wire = do
@@ -51,10 +51,10 @@ runWire (closedRef, sizeRef) session wire = do
       (Press,   Release) -> Decr
       (Release, Press)   -> Incr
       (Release, Release) -> Stay
-    inputs = Inputs { steerXY       = (steer left right, steer down up)
+    inputs = Inputs { steer         = V3 (steer left right) (steer down up) Stay
                     , firePressed   = (enter == Press) || (space == Press)
                     , escapePressed = (esc  == Press)
-                    , normSize      = nsize
+                    , norm          = nsize
                     }
   if closed then return () else do
     (st , session') <- stepSession session

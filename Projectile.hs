@@ -21,65 +21,57 @@ bottom = 1.0
 
 data Projectile = Projectile LocVel
 
--- | Projectile velocity by axis x, y or z.
--- Input signal is whether it has hit the bottom.
+-- | Projectile velocity - keep original until bounce
+-- Input signal is whether it has bounced off the wall.
 
-velocity :: (MonadFix m, Monoid e)
-         => Double
-         -> Wire s e m Bounce Double
-velocity iv = mkSFN $ \bounce -> let v = fixv iv bounce in (v, velocity v)
-    where
-    fixv iv bounce= case bounce of
-      MkNeg -> - abs iv
-      MkPos ->   abs iv
-      Keep  ->   iv
-
-location :: (HasTime t s, MonadFix m)
-         => XYZ
-         -> Double
-         -> Wire s () m Double (Double, Bounce)
-location xyz il = checkbounce xyz . integral il
+velocity :: (Monoid e, MonadFix m)
+         => Vel -> Wire s e m (V3 Bounce) Vel
+velocity iv = v3wi iv vel1
   where
-    checkbounce :: XYZ -> Wire s e m Double (Double, Bounce)
-    checkbounce xyz = mkSF_ $ \loc ->
-      case xyz of
-        Z -> if loc > bottom then ((2*bottom - loc), MkNeg) else (loc, Keep)
-        _ -> (loc, Keep)
+  vel1 :: (Monoid e, MonadFix m) => Double -> Wire s e m Bounce Double
+  vel1 iv = mkSFN $ \bounce -> let v = fixv iv bounce in (v, vel1 v)
+  fixv :: Double -> Bounce -> Double
+  fixv iv bounce= case bounce of
+    MkNeg -> - abs iv
+    MkPos ->   abs iv
+    Keep  ->   iv
 
-axis :: (HasTime t s, MonadFix m)
-     => XYZ
-     -> (Double, Double)
-     -> Wire s () m a (Double, Double) -- (location, velocity) for axis
-axis xyz (il, iv) = proc _ -> do
-  rec (loc, bounce) <- location xyz il -< vel
+location :: (HasTime t s, Monoid e, MonadFix m)
+         => Loc
+         -> Wire s e m Vel (Loc, V3 Bounce)
+location il = checkbounce . integral il
+  where
+    checkbounce :: Wire s e m Loc (Loc, V3 Bounce)
+    checkbounce = mkSF_ $ \loc@(V3 x y z) ->
+      if z > bottom -- Only bounce off the bootom for now
+        then (V3 x y (2*bottom - z), V3 Keep Keep MkNeg)
+        else (loc, V3 Keep Keep Keep)
+
+locvel :: (HasTime t s, Monoid e, MonadFix m)
+     => LocVel
+     -> Wire s e m a LocVel
+locvel (il, iv) = proc _ -> do
+  rec (loc, bounce) <- location il -< vel
       vel <- velocity iv -< bounce
   returnA -< (loc, vel)
 
-mkProjectile :: (HasTime t s, MonadFix m)
+mkProjectile :: (HasTime t s, Monoid e, MonadFix m)
              => LocVel
-             -> Wire s () m a Projectile
-mkProjectile ((ilx, ily, ilz), (ivx, ivy, ivz)) = Projectile <$> locvel
-  where
-    locvel = (,) <$> loc3 <*> vel3
-    loc3 = (,,) <$> (fst <$> axis X (ilx, ivx))
-                <*> (fst <$> axis Y (ily, ivy))
-                <*> (fst <$> axis Z (ilz, ivz))
-    vel3 = (,,) <$> (snd <$> axis X (ilx, ivx))
-                <*> (snd <$> axis Y (ily, ivy))
-                <*> (snd <$> axis Z (ilz, ivz))
+             -> Wire s e m a Projectile
+mkProjectile ilv = Projectile <$> locvel ilv
 
-mergeLaunches :: (HasTime t s, MonadFix m)
-                => [Wire s () m a Projectile]
-                -> Wire s () m LocVel [Wire s () m a Projectile]
+mergeLaunches :: (HasTime t s, Monoid e, MonadFix m)
+                => [Wire s e m a Projectile]
+                -> Wire s e m LocVel [Wire s e m a Projectile]
 mergeLaunches ps = mkSFN $ \locvel ->
   ps `seq` (ps, mergeLaunches ((mkProjectile locvel):ps))
 
-foldProjectiles :: (HasTime t s, MonadFix m)
-                => Wire s () m [Wire s () m a Projectile] [Projectile]
+foldProjectiles :: (HasTime t s, Monoid e, MonadFix m)
+                => Wire s e m [Wire s e m a Projectile] [Projectile]
 foldProjectiles = pure []
 
-projectilesWire :: (HasTime t s, MonadFix m)
-                => Wire s () m Launch [Projectile]
+projectilesWire :: (HasTime t s, Monoid e, MonadFix m)
+                => Wire s e m Launch [Projectile]
 {-
 projectilesWire = proc launch -> do
   rec
@@ -91,13 +83,13 @@ projectilesWire = proc launch -> do
 -- projectilesWire = foldProjectiles . (mergeLaunches [] . hold <|> pure [])
 -- FIXME
 --projectilesWire = (:[]) <$> (pure $ Projectile ((0, 0, 0.5), (0, 0, 0.1)))
-projectilesWire = (:[]) <$> (mkProjectile ((0, 0, 0.5), (0, 0, 0.1)))
+projectilesWire = (:[]) <$> (mkProjectile ((V3 0 0 0.5), (V3 0 0 0.1)))
 
 -- Rendering projectile.
 
 -- FIXME render shafts in the process of being reflected
-renderShaft :: Vec3 -> Bool -> IO ()
-renderShaft (x, y, z) outgoing = do
+renderShaft :: Loc -> Bool -> IO ()
+renderShaft (V3 x y z) outgoing = do
   if outgoing then
     color4d (0, 1, 1, 1)
   else
@@ -105,8 +97,8 @@ renderShaft (x, y, z) outgoing = do
   renderPrimitive Lines $ mapM_ vertex3d 
     [ (x, y, z), (x, y, z-(if outgoing then hv; else (-hv))) ]
 
-renderProjectile :: (Double, Double) -> Projectile -> IO ()
-renderProjectile _ (Projectile (loc, (_, _, vz))) = do
+renderProjectile :: V3 Double -> Projectile -> IO ()
+renderProjectile _ (Projectile (loc, (V3 _ _ vz))) = do
   -- matrixMode $= Modelview 0
   -- loadIdentity
   renderShaft loc (vz > 0)

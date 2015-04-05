@@ -129,8 +129,8 @@ boxscale kx ky = newMatrix RowMajor [ 1/x', 0   , 0, 0
     x' = realToFrac kx :: GLfloat
     y' = realToFrac ky :: GLfloat
 
-renderPlayer :: (Double, Double) -> Player -> IO ()
-renderPlayer (kx, ky) (Player ((V3 x y _), _) _) = do
+renderPlayer :: V3 Double -> Player -> IO ()
+renderPlayer (V3 kx ky _) (Player ((V3 x y _), _) _) = do
   matrixMode $= Projection
   loadIdentity
   boxscale kx ky >>= multMatrix
@@ -140,7 +140,7 @@ renderPlayer (kx, ky) (Player ((V3 x y _), _) _) = do
   lineWidth $= 1.5
   renderBox kx ky
 
-renderHUD :: (Double, Double) -> Player -> IO ()
+renderHUD :: V3 Double -> Player -> IO ()
 renderHUD _ (Player ((V3 x y _), _) _) = do
   color4d (1, 0, 1, 1)
   lineWidth $= 0.5

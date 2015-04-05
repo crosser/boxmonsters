@@ -24,12 +24,12 @@ monstersWire :: (MonadFix m) => Wire s () m () [Monster]
 monstersWire = (:[]) <$> monsterWire
 
 monsterWire :: (MonadFix m) => Wire s () m a Monster
-monsterWire = pure $ Monster ((0,0,1),(0,0,1)) GreenMonster
+monsterWire = pure $ Monster (V3 0 0 1, V3 0 0 1) GreenMonster
 
 -- Rendering Monster.
 
-renderFace :: Vec3 -> IO ()
-renderFace (x, y, z) =
+renderFace :: Loc -> IO ()
+renderFace (V3 x y z) =
   renderPrimitive Quads $ mapM_ vertex3d
     [ (x-hv, y-hv, z)
     , (x+hv, y-hv, z)
@@ -37,7 +37,7 @@ renderFace (x, y, z) =
     , (x-hv, y+hv, z)
     ]
 
-renderMonster :: (Double, Double) -> Monster -> IO ()
+renderMonster :: V3 Double -> Monster -> IO ()
 renderMonster _ (Monster (loc, _) level) = do
   -- matrixMode $= Modelview 0
   -- loadIdentity

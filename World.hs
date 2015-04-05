@@ -27,7 +27,7 @@ worldWire = run . unless escapePressed
         projectiles <- projectilesWire -< plaunch
       returnA -< World player monsters projectiles
 
-renderWorld :: (Double, Double) -> World -> IO ()
+renderWorld :: V3 Double -> World -> IO ()
 renderWorld size (World player monsters projectiles) = do
   renderPlayer size player
   mapM_ (renderMonster size) monsters

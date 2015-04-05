@@ -11,6 +11,7 @@ module IFOs ( V3(V3)
             , v2pair
             , pair2v
             , v3w
+            , v3wi
             ) where
 
 import Control.Wire hiding ((.))
@@ -63,10 +64,13 @@ pair2v (u, v) = (,) <$> u <*> v
 
 v3w :: Monad m => Wire s e m a b -> Wire s e m (V3 a) (V3 b)
 v3w w = V3 <$> (w <<^ v3x) <*> (w <<^ v3y) <*> (w <<^ v3z)
-  where
-  v3x (V3 x _ _) = x
-  v3y (V3 _ y _) = y
-  v3z (V3 _ _ z) = z
+
+v3wi :: Monad m => V3 i -> (i -> Wire s e m a b) -> Wire s e m (V3 a) (V3 b)
+v3wi (V3 x y z) w = V3 <$> (w x <<^ v3x) <*> (w y <<^ v3y) <*> (w z <<^ v3z)
+
+v3x (V3 x _ _) = x
+v3y (V3 _ y _) = y
+v3z (V3 _ _ z) = z
 
 -- IFO characteristics and controls
 
