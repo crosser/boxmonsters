@@ -1,3 +1,5 @@
+-- | Player is an Identified Flying Object steered by keys in the plane z=0
+
 {-# LANGUAGE Arrows #-}
 
 module Player (Player(Player), playerWire, renderPlayer, renderHUD) where
@@ -22,52 +24,53 @@ speed = 0.5
 lspeed = 0.5
 hvsize = 0.05
 
--- | Player velocity by axis x or y (defined by X or Y).
--- Clamping passed over from `location` as (aboveLow, belowHigh) Bool pair.
--- Output velocity.
+-- Clamping passed over from `location`
+-- meaning (aboveLowLimit, belowHighLimit) for each axis
+type InLims = V3 (Bool, Bool)
+
+-- | Player velocity from inputs and clamping
 
 velocity :: (MonadFix m, Monoid e)
-         => XYZ
-         -> Wire s e m (Inputs, (Bool, Bool)) Double
-velocity xy = pure (-speed) . when (movecmd xy Decr)
-                            . when (\(_, (lo, _ )) -> lo)
-          <|> pure ( speed) . when (movecmd xy Incr)
-                            . when (\(_, (_ , hi)) -> hi)
-          <|> pure (     0) -- . when (movecmd (xy . steerXY) Stay)
+         => Wire s e m (Inputs, InLims) Vel
+velocity = (v3w vel1) <<^ \(inp, inlim) -> pair2v ((steer inp), inlim)
   where
-    movecmd xy decrincr (inputs, (_, _)) = (steer xy inputs) == decrincr
+  vel1 :: (Monad m, Monoid e) => Wire s e m (Steer, (Bool, Bool)) Double
+  vel1 =  pure (-speed) . when (steeris Decr) . when aboveLo
+      <|> pure ( speed) . when (steeris Incr) . when belowHi
+      <|> pure (     0) -- . when (steer Stay)
+  steeris d (s, (_, _)) = s == d
+  aboveLo   (_, (x, _)) = x
+  belowHi   (_, (_, x)) = x
 
--- | Player location by axis x or y (defined by X or Y).
--- Input is (inputs, velocity).
--- Output coordinate and (aboveLow, belowHigh) Bool pair.
+-- | Player location from inputs and velocity
+-- Output coordinates and InLims Bool pairs.
 
 location :: (HasTime t s, MonadFix m)
-         => XYZ
-         -> Wire s () m (Inputs, Double) (Double, (Bool, Bool))
-location xy = proc (inputs, vel) -> do
+         => Wire s e m (Inputs, Vel) (Loc, InLims)
+location = v2pair ^<< location' <<^ \(inp, vel) -> pair2v ((norm inp), vel)
+location' :: (HasTime t s, MonadFix m)
+          => Wire s e m (V3 (Double, Double)) (V3 (Double, (Bool, Bool)))
+location' = location1
+location1 = proc (size, vel) -> do
   rawloc <- integral 0 -< vel
-  size <- mkSF_ (nsize xy) -< inputs
-  clamped <- clamp -< (rawloc, size)
+  clamped <- mkSF_ clamp -< (rawloc, size)
   returnA -< clamped
     where
-      clamp :: Wire s e m (Double, Double) (Double, (Bool, Bool))
-      clamp = mkSF_ $ clamp'
-      clamp' (x, size)
-        | x < lo    = (lo, (False, True))
-        | x > hi    = (hi, (True, False))
-        | otherwise = (x,  (True, True))
-        where
-          lo = hvsize - size
-          hi = size - hvsize
+    clamp (x, size)
+      | x < lo    = (lo, (False, True))
+      | x > hi    = (hi, (True, False))
+      | otherwise = (x,  (True, True))
+      where
+      lo = hvsize - size
+      hi = size - hvsize
 
--- | Produce (location, velocity) tuple, honoring limits, by one axis
+-- | Player's (location, velocity) tuple, honoring limits
 
-axis :: (HasTime t s, MonadFix m)
-     => XYZ
-     -> Wire s () m Inputs (Double, Double) -- (location, velocity) for axis
-axis xy = proc inputs -> do
-  rec (loc, lim) <- location xy -< (inputs, vel)
-      vel <- velocity xy -< (inputs, lim)
+locvel :: (HasTime t s, MonadFix m)
+       => Wire s e m Inputs LocVel
+locvel = proc inputs -> do
+  rec (loc, lim) <- location -< (inputs, vel)
+      vel <- velocity -< (inputs, lim)
   returnA -< (loc, vel)
 
 -- | Player wire, produces location and event stream of launches
@@ -75,13 +78,8 @@ axis xy = proc inputs -> do
 playerWire :: (HasTime t s, MonadFix m) => Wire s () m Inputs Player
 playerWire = Player <$> locvel <*> launch
   where
-    locvel = (,) <$> loc3 <*> vel3
-      where
-        loc3 = (,,) <$> (fst <$> axis X) <*> (fst <$> axis Y) <*> (pure 0.5)
-        vel3 = (,,) <$> (snd <$> axis X) <*> (snd <$> axis Y) <*> (pure 0.0)
-    launch = once . now . (launchlv <$> locvel) . when firePressed <|> never
-      where
-        launchlv (loc, (vx, vy, _)) = (loc, (vx, vy, lspeed))
+  launch = once . now . (launchlv <$> locvel) . when firePressed <|> never
+  launchlv (loc, (vx, vy, _)) = (loc, (vx, vy, lspeed))
 
 -- Rendering Player. Because it is not visible, the "rendering" is
 -- in fact setting up the scene (box, perspective and crosshair).
