@@ -47,16 +47,15 @@ velocity = (v3w vel1) <<^ \(inp, inlim) -> pair2v ((steer inp), inlim)
 
 location :: (HasTime t s, MonadFix m)
          => Wire s e m (Inputs, Vel) (Loc, InLims)
-location = v2pair ^<< location' <<^ \(inp, vel) -> pair2v ((norm inp), vel)
+location = location' <<^ \(inp, vel) -> ((norm inp), vel)
 location' :: (HasTime t s, MonadFix m)
-          => Wire s e m (V3 (Double, Double)) (V3 (Double, (Bool, Bool)))
-location' = location1
-location1 = proc (size, vel) -> do
+          => Wire s e m (V3 Double, Vel) (Loc, InLims)
+location' = proc (size, vel) -> do
   rawloc <- integral 0 -< vel
-  clamped <- mkSF_ clamp -< (rawloc, size)
+  clamped <- v2pair ^<< v3w (mkSF_ clamp1) -< pair2v (rawloc, size)
   returnA -< clamped
     where
-    clamp (x, size)
+    clamp1 (x, size)
       | x < lo    = (lo, (False, True))
       | x > hi    = (hi, (True, False))
       | otherwise = (x,  (True, True))
@@ -66,7 +65,7 @@ location1 = proc (size, vel) -> do
 
 -- | Player's (location, velocity) tuple, honoring limits
 
-locvel :: (HasTime t s, MonadFix m)
+locvel :: (HasTime t s, Monoid e, MonadFix m)
        => Wire s e m Inputs LocVel
 locvel = proc inputs -> do
   rec (loc, lim) <- location -< (inputs, vel)
@@ -75,11 +74,12 @@ locvel = proc inputs -> do
 
 -- | Player wire, produces location and event stream of launches
 
-playerWire :: (HasTime t s, MonadFix m) => Wire s () m Inputs Player
+playerWire :: (HasTime t s, Monoid e, MonadFix m) => Wire s e m Inputs Player
 playerWire = Player <$> locvel <*> launch
   where
+  launch :: (HasTime t s, Monoid e, MonadFix m) => Wire s e m Inputs Launch
   launch = once . now . (launchlv <$> locvel) . when firePressed <|> never
-  launchlv (loc, (vx, vy, _)) = (loc, (vx, vy, lspeed))
+  launchlv (loc, V3 vx vy _) = (loc, V3 vx vy lspeed)
 
 -- Rendering Player. Because it is not visible, the "rendering" is
 -- in fact setting up the scene (box, perspective and crosshair).
@@ -130,7 +130,7 @@ boxscale kx ky = newMatrix RowMajor [ 1/x', 0   , 0, 0
     y' = realToFrac ky :: GLfloat
 
 renderPlayer :: (Double, Double) -> Player -> IO ()
-renderPlayer (kx, ky) (Player ((x, y, _), _) _) = do
+renderPlayer (kx, ky) (Player ((V3 x y _), _) _) = do
   matrixMode $= Projection
   loadIdentity
   boxscale kx ky >>= multMatrix
@@ -141,7 +141,7 @@ renderPlayer (kx, ky) (Player ((x, y, _), _) _) = do
   renderBox kx ky
 
 renderHUD :: (Double, Double) -> Player -> IO ()
-renderHUD _ (Player ((x, y, _), _) _) = do
+renderHUD _ (Player ((V3 x y _), _) _) = do
   color4d (1, 0, 1, 1)
   lineWidth $= 0.5
   renderXHair x y
