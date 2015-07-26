@@ -1,20 +1,25 @@
 -- | Identified Flying Objects
 
+{-# LANGUAGE Arrows #-}
+
 module IFOs ( V3(V3)
             , Loc
             , Vel
             , LocVel
             , Launch
             , Steer(..)
-            , Bounce(..)
             , Inputs(..)
             , v2pair
             , pair2v
             , v3w
             , v3wi
+            , bouncylv
             ) where
 
-import Control.Wire hiding ((.))
+import Prelude hiding ((.), id)
+import Control.Monad.Fix
+import Control.Wire
+import FRP.Netwire
 
 -- V3 type and instances borrowed from `linear` package
 
@@ -86,4 +91,44 @@ data Inputs = Inputs { steer         :: V3 Steer
                      , norm          :: V3 Double
                      }
 
-data Bounce = MkNeg | Keep | MkPos
+-- | Bouncy object velocity - keep original until bounce
+-- Input signal is whether it has bounced off the wall.
+
+velocity :: (Monoid e, MonadFix m)
+         => Vel -> Wire s e m (V3 Bool) Vel
+velocity iv = v3wi iv vel1
+  where
+  vel1 :: (Monoid e, MonadFix m) => Double -> Wire s e m Bool Double
+  vel1 iv = mkSFN $ \bounce -> let v = fixv iv bounce in (v, vel1 v)
+  fixv :: Double -> Bool -> Double
+  fixv iv bounce= if bounce then -iv else iv
+
+-- | Bouncy object location - inegrate velocity until bounce
+-- Input signal is limits and velocity
+
+location :: (HasTime t s, Monoid e, MonadFix m)
+         => Double
+         -> Loc
+         -> Wire s e m (V3 Double, Vel) (Loc, V3 Bool)
+location hvsize il = proc (size, vel) -> do
+  rawloc <- integral il -< vel
+  bounced <- v2pair ^<< v3w (mkSF_ bounce1) -< pair2v (rawloc, size)
+  returnA -< bounced
+  where
+    bounce1 (x, size)
+      | x < lo    = (2*lo - x, True)
+      | x > hi    = (2*hi - x, True)
+      | otherwise = (x, False)
+      where
+        lo = hvsize - size
+        hi = size - hvsize
+
+bouncylv :: (HasTime t s, Monoid e, MonadFix m)
+         => Double
+         -> LocVel
+         -> Wire s e m Inputs LocVel
+bouncylv hvsize (il, iv) = proc inputs -> do
+  rec (loc, bounce) <- location hvsize il -< ((norm inputs), vel)
+      vel <- velocity iv -< bounce
+  returnA -< (loc, vel)
+

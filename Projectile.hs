@@ -17,48 +17,12 @@ hv = 0.1
 
 -- Functional part.
 
-bottom = 1.0
-
 data Projectile = Projectile LocVel
-
--- | Projectile velocity - keep original until bounce
--- Input signal is whether it has bounced off the wall.
-
-velocity :: (Monoid e, MonadFix m)
-         => Vel -> Wire s e m (V3 Bounce) Vel
-velocity iv = v3wi iv vel1
-  where
-  vel1 :: (Monoid e, MonadFix m) => Double -> Wire s e m Bounce Double
-  vel1 iv = mkSFN $ \bounce -> let v = fixv iv bounce in (v, vel1 v)
-  fixv :: Double -> Bounce -> Double
-  fixv iv bounce= case bounce of
-    MkNeg -> - abs iv
-    MkPos ->   abs iv
-    Keep  ->   iv
-
-location :: (HasTime t s, Monoid e, MonadFix m)
-         => Loc
-         -> Wire s e m Vel (Loc, V3 Bounce)
-location il = checkbounce . integral il
-  where
-    checkbounce :: Wire s e m Loc (Loc, V3 Bounce)
-    checkbounce = mkSF_ $ \loc@(V3 x y z) ->
-      if z > bottom -- Only bounce off the bootom for now
-        then (V3 x y (2*bottom - z), V3 Keep Keep MkNeg)
-        else (loc, V3 Keep Keep Keep)
-
-locvel :: (HasTime t s, Monoid e, MonadFix m)
-     => LocVel
-     -> Wire s e m a LocVel
-locvel (il, iv) = proc _ -> do
-  rec (loc, bounce) <- location il -< vel
-      vel <- velocity iv -< bounce
-  returnA -< (loc, vel)
 
 projectileWire :: (HasTime t s, Monoid e, MonadFix m)
              => LocVel
-             -> Wire s e m a Projectile
-projectileWire ilv = Projectile <$> locvel ilv
+             -> Wire s e m Inputs Projectile
+projectileWire ilv = Projectile <$> bouncylv 0.0 ilv
 
 -- Rendering projectile.
 
