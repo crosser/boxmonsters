@@ -1,6 +1,6 @@
 {-# LANGUAGE Arrows #-}
 
-module Monster (Monster(..), monstersWire, renderMonster) where
+module Monster (Monster(..), monsterWire, renderMonster) where
 
 import Prelude hiding ((.), id)
 import Control.Monad.Fix
@@ -20,11 +20,8 @@ hv = 0.05
 
 -- Functional part.
 
-monstersWire :: (MonadFix m) => Wire s () m () [Monster]
-monstersWire = (:[]) <$> monsterWire
-
-monsterWire :: (MonadFix m) => Wire s () m a Monster
-monsterWire = pure $ Monster (V3 0 0 1, V3 0 0 1) GreenMonster
+monsterWire :: (MonadFix m) => LocVel -> Wire s () m a Monster
+monsterWire ilv = pure $ Monster ilv GreenMonster
 
 -- Rendering Monster.
 

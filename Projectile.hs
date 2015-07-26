@@ -1,6 +1,6 @@
 {-# LANGUAGE Arrows #-}
 
-module Projectile (Projectile(..), projectilesWire, renderProjectile) where
+module Projectile (Projectile(..), projectileWire, renderProjectile) where
 
 import Prelude hiding ((.), id)
 import Control.Monad.Fix
@@ -55,35 +55,10 @@ locvel (il, iv) = proc _ -> do
       vel <- velocity iv -< bounce
   returnA -< (loc, vel)
 
-mkProjectile :: (HasTime t s, Monoid e, MonadFix m)
+projectileWire :: (HasTime t s, Monoid e, MonadFix m)
              => LocVel
              -> Wire s e m a Projectile
-mkProjectile ilv = Projectile <$> locvel ilv
-
-mergeLaunches :: (HasTime t s, Monoid e, MonadFix m)
-                => [Wire s e m a Projectile]
-                -> Wire s e m LocVel [Wire s e m a Projectile]
-mergeLaunches ps = mkSFN $ \locvel ->
-  ps `seq` (ps, mergeLaunches ((mkProjectile locvel):ps))
-
-foldProjectiles :: (HasTime t s, Monoid e, MonadFix m)
-                => Wire s e m [Wire s e m a Projectile] [Projectile]
-foldProjectiles = pure []
-
-projectilesWire :: (HasTime t s, Monoid e, MonadFix m)
-                => Wire s e m Launch [Projectile]
-{-
-projectilesWire = proc launch -> do
-  rec
-    pws' <- mergeLaunches -< (pws, launch)
-    ps' <- foldProjectiles -< pws'
-    (pws, ps) <- filtProjectiles -< (pws', ps')
-  returnA -< ps
--}
--- projectilesWire = foldProjectiles . (mergeLaunches [] . hold <|> pure [])
--- FIXME
---projectilesWire = (:[]) <$> (pure $ Projectile ((0, 0, 0.5), (0, 0, 0.1)))
-projectilesWire = (:[]) <$> (mkProjectile ((V3 0 0 0.5), (V3 0 0 0.1)))
+projectileWire ilv = Projectile <$> locvel ilv
 
 -- Rendering projectile.
 
