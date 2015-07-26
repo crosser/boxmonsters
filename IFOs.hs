@@ -6,7 +6,6 @@ module IFOs ( V3(V3)
             , Loc
             , Vel
             , LocVel
-            , Launch
             , Steer(..)
             , Inputs(..)
             , v2pair
@@ -82,7 +81,6 @@ v3z (V3 _ _ z) = z
 type Loc = V3 Double
 type Vel = V3 Double
 type LocVel = (Loc, Vel)
-type Launch = Event LocVel
 
 data Steer = Decr | Stay | Incr deriving Eq
 data Inputs = Inputs { steer         :: V3 Steer

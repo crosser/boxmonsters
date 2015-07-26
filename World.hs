@@ -27,7 +27,7 @@ worldWire :: (HasTime t s, MonadFix m) => Wire s () m Inputs World
 worldWire = run . unless escapePressed
   where
     run = proc inp -> do
-      player@(Player locvel plaunch) <- playerWire -< inp
+      player@(Player plv) <- playerWire -< inp
       rec
         (ms, mws) <- unzip ^<< groupWires <<< second (delay imws) -< (inp, mws)
         (ps, pws) <- unzip ^<< groupWires <<< second (delay ipws) -< (inp, pws)

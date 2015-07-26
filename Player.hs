@@ -15,7 +15,7 @@ import Graphics.UI.GLFW
 import GLUtils
 import IFOs
 
-data Player = Player LocVel Launch
+data Player = Player LocVel
 
 -- Functional part.
 
@@ -72,11 +72,7 @@ locvel = proc inputs -> do
 -- | Player wire, produces location and event stream of launches
 
 playerWire :: (HasTime t s, Monoid e, MonadFix m) => Wire s e m Inputs Player
-playerWire = Player <$> locvel <*> launch
-  where
-  launch :: (HasTime t s, Monoid e, MonadFix m) => Wire s e m Inputs Launch
-  launch = once . now . (launchlv <$> locvel) . when firePressed <|> never
-  launchlv (loc, V3 vx vy _) = (loc, V3 vx vy lspeed)
+playerWire = Player <$> locvel
 
 -- Rendering Player. Because it is not visible, the "rendering" is
 -- in fact setting up the scene (box, perspective and crosshair).
@@ -127,7 +123,7 @@ boxscale kx ky = newMatrix RowMajor [ 1/x', 0   , 0, 0
     y' = realToFrac ky :: GLfloat
 
 renderPlayer :: V3 Double -> Player -> IO ()
-renderPlayer (V3 kx ky _) (Player ((V3 x y _), _) _) = do
+renderPlayer (V3 kx ky _) (Player ((V3 x y _), _)) = do
   matrixMode $= Projection
   loadIdentity
   boxscale kx ky >>= multMatrix
@@ -138,7 +134,7 @@ renderPlayer (V3 kx ky _) (Player ((V3 x y _), _) _) = do
   renderBox kx ky
 
 renderHUD :: V3 Double -> Player -> IO ()
-renderHUD _ (Player ((V3 x y _), _) _) = do
+renderHUD _ (Player ((V3 x y _), _)) = do
   color4d (1, 0, 1, 1)
   lineWidth $= 0.5
   renderXHair x y
