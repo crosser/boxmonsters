@@ -25,8 +25,8 @@ initialWSize = Size 640 480
 
 normWSize :: Size -> V3 Double
 normWSize (Size x y)
-  | x > y     = V3 (fromIntegral x / fromIntegral y) 1 1
-  | otherwise = V3 1 (fromIntegral y / fromIntegral x) 1
+  | x > y     = V3 (fromIntegral x / fromIntegral y) 1 2
+  | otherwise = V3 1 (fromIntegral y / fromIntegral x) 2
 
 -- | Run the outermost Wire giving it all the external inputs as signal
 

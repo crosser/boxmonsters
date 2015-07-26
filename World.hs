@@ -33,7 +33,7 @@ worldWire = run . unless escapePressed
         (ps, pws) <- unzip ^<< groupWires <<< second (delay ipws) -< (inp, pws)
       returnA -< World player ms ps
     imws = [monsterWire (V3 0 0 1, V3 0 0 0)
-           ,monsterWire (V3 0.5 0.5 1, V3 0 0 0)]
+           ,monsterWire (V3 0.5 0.5 1, V3 0.2 0.1 0)]
     ipws = [projectileWire (V3 0 0 0.5, V3 0 0 0.2)
            ,projectileWire (V3 (-0.5) (-0.5) 0.5, V3 0 0 0.1)]
 

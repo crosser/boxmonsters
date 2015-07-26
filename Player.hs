@@ -46,11 +46,8 @@ velocity = (v3w vel1) <<^ \(inp, inlim) -> pair2v ((steer inp), inlim)
 -- Output coordinates and InLims Bool pairs.
 
 location :: (HasTime t s, MonadFix m)
-         => Wire s e m (Inputs, Vel) (Loc, InLims)
-location = location' <<^ \(inp, vel) -> ((norm inp), vel)
-location' :: (HasTime t s, MonadFix m)
-          => Wire s e m (V3 Double, Vel) (Loc, InLims)
-location' = proc (size, vel) -> do
+         => Wire s e m (V3 Double, Vel) (Loc, InLims)
+location = proc (size, vel) -> do
   rawloc <- integral 0 -< vel
   clamped <- v2pair ^<< v3w (mkSF_ clamp1) -< pair2v (rawloc, size)
   returnA -< clamped
@@ -60,15 +57,15 @@ location' = proc (size, vel) -> do
       | x > hi    = (hi, (True, False))
       | otherwise = (x,  (True, True))
       where
-      lo = hvsize - size
-      hi = size - hvsize
+        lo = hvsize - size
+        hi = size - hvsize
 
 -- | Player's (location, velocity) tuple, honoring limits
 
 locvel :: (HasTime t s, Monoid e, MonadFix m)
        => Wire s e m Inputs LocVel
 locvel = proc inputs -> do
-  rec (loc, lim) <- location -< (inputs, vel)
+  rec (loc, lim) <- location -< ((norm inputs), vel)
       vel <- velocity -< (inputs, lim)
   returnA -< (loc, vel)
 
