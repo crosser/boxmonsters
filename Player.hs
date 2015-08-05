@@ -21,7 +21,6 @@ data Player = Player LocVel
 
 -- game constants
 speed = 0.5
-lspeed = 0.5
 hvsize = 0.05
 
 -- Clamping passed over from `location`
